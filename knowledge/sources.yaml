@@ -1,0 +1,29 @@
+# Source pack for the demo knowledge base (WBS 2.1 / 2.2).
+# Public documents only. Every citation traces back to doc_id + edition + sha256.
+# The ingestion pipeline downloads each URL and refuses to continue if the hash does not match.
+version: 1
+documents:
+  - doc_id: ergo-zek-2025-04
+    title: "Zahnzusatzversicherung Zahnersatz Sofort (Tarif ZEK) – Informationsblatt und Allgemeine Versicherungsbedingungen"
+    issuer: ERGO Krankenversicherung AG
+    products: [ZEK]
+    doc_type: terms
+    language: de
+    edition: "04/2025"
+    url: "https://rest.zahnzusatzversicherung-experten.com/filestore/documents/ERGO.AVB.Tarif%20ZEK.04-2024.pdf"
+    official_source: false
+    retrieved: 2026-11-05
+    sha256: 9a12494a1d6f4267287f3dec85444b1cccfe6c8881077c5fcd310c06015467fc
+    notes: "Broker-hosted copy. Replace with the official ergo.de download of the same edition before the demo."
+
+  - doc_id: ergo-ds100-brochure-2026-02
+    title: "Dental-Schutz 100 – Produktbroschüre"
+    issuer: ERGO Krankenversicherung AG
+    products: [DS100]
+    doc_type: brochure
+    language: de
+    edition: "11.02.2026"
+    url: "https://www.ergo.de/content/dam/ergo/pdf/kranken/zahnzusatz/dentalschutz-ds100.pdf.coredownload.pdf"
+    official_source: true
+    retrieved: 2026-11-05
+    sha256: e11bff42f991987ca5ead7922c2a36c1d78048c344f6610ca46fda79bc0f23c3
