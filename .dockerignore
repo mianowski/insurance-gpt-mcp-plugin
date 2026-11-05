@@ -6,6 +6,6 @@
 .pytest_cache
 .ruff_cache
 knowledge/raw
-outosurce
+outsource
 tests
 docs
