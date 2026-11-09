@@ -16,13 +16,32 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     knowledge_dir: Path = PROJECT_ROOT / "knowledge"
-    qdrant_path: Path = PROJECT_ROOT / ".data" / "qdrant"
+    data_dir: Path = PROJECT_ROOT / ".data"
+
+    embedding_model: str = "intfloat/multilingual-e5-large"
+    # None = in-memory Qdrant rebuilt at startup from cached embeddings; set a URL to use a Qdrant server.
+    qdrant_url: str | None = None
     collection: str = "conditions"
-    embedding_model: str = "intfloat/multilingual-e5-base"
+
+    search_top_k: int = 5
+    # Below this cosine similarity (best dense match) a search returns "no_relevant_passage".
+    min_relevance: float = 0.81
 
     @property
     def sources_file(self) -> Path:
         return self.knowledge_dir / "sources.yaml"
+
+    @property
+    def chunks_dir(self) -> Path:
+        return self.knowledge_dir / "chunks"
+
+    @property
+    def models_dir(self) -> Path:
+        return self.data_dir / "models"
+
+    @property
+    def index_dir(self) -> Path:
+        return self.data_dir / "index"
 
 
 @lru_cache

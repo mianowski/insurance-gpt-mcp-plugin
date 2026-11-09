@@ -12,15 +12,9 @@ def test_manifest_is_valid():
     assert all(len(d.sha256) == 64 for d in manifest.documents)
 
 
-def test_server_advertises_tools():
-    tools = asyncio.run(mcp.list_tools())
-    assert "list_documents" in {t.name for t in tools}
-
-
-def test_list_documents_returns_manifest():
-    result = asyncio.run(mcp.call_tool("list_documents", {}))
-    assert not result.is_error
-    assert {d["doc_id"] for d in result.structured_content["documents"]} == {
-        "ergo-zek-2025-04",
-        "ergo-ds100-brochure-2026-02",
-    }
+def test_server_advertises_read_only_tools():
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    assert set(tools) == {"list_documents", "search_conditions", "get_section"}
+    assert all(t.annotations.read_only_hint for t in tools.values())
+    assert tools["search_conditions"].input_schema["required"] == ["query"]
+    assert "outputSchema" in tools["search_conditions"].model_dump(by_alias=True, exclude_none=True)

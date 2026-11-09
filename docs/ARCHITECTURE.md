@@ -29,8 +29,8 @@ The architecture leaves seams for them but does not build them yet.
 | D3 | Citations are **verified by the server**, not trusted from the model. The model passes the quote it wants to show; the server checks it exists verbatim in the source chunk and renders it. | This is the "prove the point" requirement. A model can paraphrase or hallucinate a quote; the server-rendered citation card cannot. |
 | D4 | **Hybrid retrieval** (dense embeddings + BM25 keyword) over **section-aware chunks** (one chunk ≈ one § / sub-clause). | Insurance T&Cs are full of exact terms (*Wartezeit*, *Implantate*, *Inlays*, § numbers) where keyword search beats pure vectors; § boundaries make citations meaningful. |
 | D5 | Python, official `mcp` SDK 2.x (`MCPServer`, formerly FastMCP), Streamable HTTP transport, single container. | Matches the repo template; one deployable unit for the demo. |
-| D6 | Vector store: **Qdrant** (embedded/local mode for dev, Docker or Qdrant Cloud for hosted demo). | Native dense + sparse hybrid search, metadata filters, trivial to run locally, scales if PoC continues. Alternatives considered: Chroma (no built-in hybrid), pgvector (needs Postgres), LanceDB (fine, less mature hybrid). |
-| D7 | Embeddings: **multilingual local model** via `fastembed` (`intfloat/multilingual-e5-base` for the demo; `-large` if eval shows it helps), behind an `Embedder` interface. | Documents are German, customers ask in English or German — a multilingual model matches across languages. Local = no API key, no data leaves the box. Swappable later for an ERGO-approved service (e.g. Azure OpenAI in EU). |
+| D6 | Vector store: **Qdrant**, in-memory, rebuilt at startup from cached embeddings (`.data/index/<fingerprint>.npz`); `IGPT_QDRANT_URL` switches to a Qdrant server. | Native dense + sparse hybrid search, metadata filters, trivial to run locally, scales if PoC continues. Alternatives considered: Chroma (no built-in hybrid), pgvector (needs Postgres), LanceDB (fine, less mature hybrid). |
+| D7 | Embeddings: **multilingual local model** via `fastembed`: `intfloat/multilingual-e5-large` (fastembed has no e5-base; e5-large beat `paraphrase-multilingual-mpnet-base-v2` on our eval, MRR 0.93 vs 0.80), behind an `Embedder` class. BM25 with German stemming for exact terms. | Documents are German, customers ask in English or German — a multilingual model matches across languages. Local = no API key, no data leaves the box. Swappable later for an ERGO-approved service (e.g. Azure OpenAI in EU). |
 | D9 | Demo hosting: **local + HTTPS tunnel** for development, then **one small EU VM** (e.g. Hetzner CX22, 4 GB RAM, ~€5/month) running Docker Compose + Caddy (automatic HTTPS). Qdrant runs embedded inside the server process — one container. | Cheapest always-on option that fits a local embedding model in memory, no cold starts (ChatGPT tool calls time out on slow cold starts of serverless hosts), EU/Germany location reads well for ERGO. Throwaway: if approved, re-deploy the same image on ERGO infrastructure. |
 | D8 | The knowledge base is **built offline and versioned in git** (source manifest + chunk files). The index is a build artifact. | WBS 2.2 "versioned knowledge files with section-level references"; reproducible; every citation traces back to a document version + hash. |
 
@@ -96,12 +96,26 @@ neighbouring paragraph ("Neue Leistungen", page-3 slogan). Tables are flattened 
 
 ### 4.2 Retrieval service — WBS 3.3
 
-- Hybrid query (dense + sparse, fused with RRF), optional filter by `doc_id` / tariff.
-- Optional reranker (e.g. `bge-reranker-v2-m3`) — add only if the eval set shows it's needed.
-- **Relevance threshold**: below it, return `status: "no_relevant_passage"` instead of weak hits, so the
-  model says "the conditions don't cover this" rather than stretching an unrelated clause.
-- Query language: tool schema asks the model to send the query **in German** (the documents' language)
-  and optionally the original question; dense multilingual embeddings cover the rest.
+- **Hybrid query**: dense e5 on the German query *and* the user's original question + BM25 (German
+  stemming) on the German query, fused with RRF; optional filter by `doc_id`. Embedded text = part title +
+  chapter + section title + clause + chunk text, so short clauses keep their context.
+- **Index**: in-memory Qdrant built at startup from `.data/index/<fingerprint>.npz`. The fingerprint covers
+  chunk texts + models, so a changed knowledge base can't be served with stale vectors. `python -m
+  insurance_gpt.ingest index` precomputes it (the Docker build does this and bakes the model in).
+- **Relevance threshold** (`IGPT_MIN_RELEVANCE`, 0.81): best cosine similarity of the hits; below it the
+  tool returns `status: "no_relevant_passage"`, so the model says the documents don't cover the question.
+- **Query language matters**: the tool *requires* a German `query`. Eval with German queries:
+  hit@5 1.00, hit@1 0.88, MRR 0.93; with raw English questions only: hit@5 0.62 (BM25 can't match English
+  to German, cross-lingual similarity is lower).
+- **Scope limits of similarity**: unrelated questions (weather, a claim number) are rejected, but other
+  insurance products on topics the documents cover ("cancel my household insurance") look relevant to
+  search. Those are declined by the model, using `list_documents.scope_note` and the skill (eval:
+  `reject_by: model`).
+- Reranker (e.g. `bge-reranker-v2-m3`) not needed at current eval results; revisit when the corpus grows.
+- Eval: `tests/eval/questions.yaml` (20 DE/EN questions with expected chunks),
+  `python -m insurance_gpt.retrieval.evaluate [--untranslated]`; `pytest` enforces hit@5 ≥ 0.9, MRR ≥ 0.85
+  and rejection of unrelated questions. The threshold margin is thin (unrelated max 0.798, in-scope min
+  0.821): grow the eval set with the WBS 1.2 scenarios before relying on it.
 
 ### 4.3 MCP server and tools — WBS 3.2, 4.1, 4.5, 4.6
 
@@ -110,9 +124,9 @@ plus a short text `content`.
 
 | Tool | Input | Output | Purpose |
 | --- | --- | --- | --- |
-| `list_documents` | – | covered products/tariffs, documents, editions | Lets the model know the scope; basis for out-of-scope answers (4.6). |
-| `search_conditions` | `query_de`, `question?`, `tariff?`, `top_k` | ranked passages: `chunk_id`, text, doc title, `section_path`, pages, score, PDF deep link | Main RAG tool. |
-| `get_section` | `doc_id`, `section_path` | full section text + neighbours | Lets the model read the whole § when a hit is a fragment (exclusions often sit in the next sub-clause). |
+| `list_documents` | – | covered documents, products, editions, `scope_note` | Lets the model know the scope; basis for out-of-scope answers (4.6). |
+| `search_conditions` | `query` (German, required), `question?`, `doc_id?`, `top_k` | `status`, passages: `chunk_id`, `citation` (e.g. "…Tarif ZEK, Ziffer 1.2, S. 6"), document, part, section title, clause, pages, PDF deep link (`#page=N`), verbatim text, relevance; `guidance` | Main RAG tool. |
+| `get_section` | `chunk_id` | all passages of that section | Lets the model read the whole section when a hit is a fragment (exclusions often sit in the next clause). |
 | `show_citation` | `chunk_id`, `quote` | verified quote + metadata, **renders citation widget** | The "proof". Server checks `quote` is a (whitespace/hyphenation-normalised) substring of the chunk; if not, returns an error telling the model to quote exactly. |
 
 Errors are returned as structured, recoverable messages for the model (4.5): `no_relevant_passage`,
@@ -201,8 +215,8 @@ Dockerfile, pyproject.toml (uv), .env.example
 | Language / packaging | Python 3.12, `uv` |
 | MCP | `mcp` 2.x (official SDK, `MCPServer`), Streamable HTTP |
 | PDF parsing | `pymupdf` / `pymupdf4llm` (fallback `docling`) |
-| Embeddings | `fastembed` — `multilingual-e5-base` dense + BM25 sparse |
-| Vector DB | Qdrant (`qdrant-client`, embedded local mode, on-disk) |
+| Embeddings | `fastembed` — `multilingual-e5-large` dense + `Qdrant/bm25` sparse (German) |
+| Vector DB | Qdrant (`qdrant-client`), in-memory from cached embeddings, or a server via URL |
 | Config | `pydantic-settings`, `.env` |
 | Tests | `pytest`; retrieval eval script (recall@k, correct-§ rate) |
 | Dev tooling | MCP Inspector; `ngrok` / `cloudflared` tunnel to test in ChatGPT |

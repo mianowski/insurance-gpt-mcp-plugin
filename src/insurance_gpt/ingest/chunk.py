@@ -147,9 +147,7 @@ def _numbered_units(lines: list[Line]) -> list[_Unit]:
         elif kind == "heading_cont":
             current.section_title += f" {line.text}"
         elif clause and current.section == clause[1]:
-            units.append(
-                _Unit(current_chapter, current.section, current.section_title, f"{clause[1]}.{clause[2]}")
-            )
+            units.append(_Unit(current_chapter, current.section, current.section_title, f"{clause[1]}.{clause[2]}"))
             if clause[3]:
                 units[-1].lines.append(_with_text(line, clause[3]))
         else:
@@ -199,11 +197,7 @@ def _page_at(offsets: list[tuple[int, int]], pos: int) -> int:
 
 
 def chunk_part(doc: SourceDocument, part: DocumentPart, lines: list[Line]) -> list[Chunk]:
-    units = (
-        _numbered_units(lines)
-        if part.structure == "numbered"
-        else _heading_units(lines, part.heading_min_size)
-    )
+    units = _numbered_units(lines) if part.structure == "numbered" else _heading_units(lines, part.heading_min_size)
     chunks: list[Chunk] = []
     heading_no = 0
     for unit in units:

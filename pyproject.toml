@@ -6,20 +6,16 @@ readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
 dependencies = [
+    "fastembed>=0.9",
+    "httpx>=0.27",
     "mcp>=2.3,<3",
+    "numpy>=2.0",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
-    "pyyaml>=6.0",
-    "uvicorn>=0.32",
-]
-
-[project.optional-dependencies]
-# Heavy dependencies for the offline ingestion pipeline and retrieval (WBS 2.2 / 3.3).
-rag = [
-    "fastembed>=0.4",
-    "httpx>=0.27",
     "pymupdf>=1.25",
-    "qdrant-client>=1.12",
+    "pyyaml>=6.0",
+    "qdrant-client>=1.15",
+    "uvicorn>=0.32",
 ]
 
 [project.scripts]
@@ -39,7 +35,7 @@ build-backend = "hatchling.build"
 packages = ["src/insurance_gpt"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]

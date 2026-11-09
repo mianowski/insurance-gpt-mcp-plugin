@@ -1,0 +1,92 @@
+# Retrieval evaluation set (WBS 1.2 / 6.1).
+# question: what the customer asks (DE or EN). query: the German search query ChatGPT is asked to send.
+# expected: chunk ids that answer the question (a hit on any of them counts); [] = out of scope.
+# reject_by (out of scope only): "search" = must come back as "no_relevant_passage" (unrelated topics);
+# "model" = other insurance products on topics the documents do cover (e.g. cancelling a contract). Search
+# can't tell those apart by similarity; ChatGPT must decline them using list_documents and the skill.
+# Run: python -m insurance_gpt.retrieval.evaluate
+questions:
+  - id: implants-de
+    question: "Zahlt der Tarif ZEK für Implantate?"
+    query: "Implantate Leistung Ausschluss Tarif ZEK"
+    expected: [ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04]
+  - id: implants-en
+    question: "Does my ZEK dental insurance pay for implants?"
+    query: "Implantate Kostenübernahme Zahnersatz"
+    expected: [ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04, ergo-zek-2025-04:ipid:h03]
+  - id: first-year-limit-de
+    question: "Wie viel zahlt die Versicherung im ersten Jahr maximal?"
+    query: "Leistungsbegrenzung erstes Versicherungsjahr Höchstbetrag"
+    expected: [ergo-zek-2025-04:avb:1.1#5, ergo-zek-2025-04:ipid:h05]
+  - id: first-year-limit-en
+    question: "Is there a maximum payout in the first two years?"
+    query: "Leistungsbegrenzung ersten zwei Versicherungsjahre maximale Gesamtleistung"
+    expected: [ergo-zek-2025-04:avb:1.1#5, ergo-zek-2025-04:ipid:h05]
+  - id: waiting-period-en
+    question: "Is there a waiting period before I can claim?"
+    query: "Wartezeit Leistungsanspruch"
+    expected: [ergo-ds100-brochure-2026-02:brochure:h08]
+  - id: cancel-de
+    question: "Wann kann ich den Vertrag kündigen?"
+    query: "Kündigung Mindestvertragsdauer Vertrag"
+    expected: [ergo-zek-2025-04:avb:5.1, ergo-zek-2025-04:ipid:h10]
+  - id: cancel-monthly-en
+    question: "Can I cancel the insurance every month?"
+    query: "monatliche Kündigung Kalendermonat"
+    expected: [ergo-zek-2025-04:avb:5.1, ergo-zek-2025-04:ipid:h10, ergo-ds100-brochure-2026-02:brochure:h08]
+  - id: treatment-started-en
+    question: "My dentist already started the treatment before I signed up. Is it covered?"
+    query: "Behandlung vor Versicherungsbeginn begonnen erweiterter Versicherungsschutz"
+    expected: [ergo-zek-2025-04:avb:1.1#2, ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04, ergo-zek-2025-04:ipid:h09]
+  - id: abroad-de
+    question: "Bin ich auch im Urlaub in Spanien versichert?"
+    query: "Auslandsaufenthalt Europäische Union Versicherungsschutz"
+    expected: [ergo-zek-2025-04:avb:1.3, ergo-zek-2025-04:ipid:h06]
+  - id: documents-en
+    question: "Which documents do I need to send in for a reimbursement?"
+    query: "Belege einreichen Rechnung Erstattung"
+    expected: [ergo-zek-2025-04:avb:2.1, ergo-zek-2025-04:ipid:h07]
+  - id: withdrawal-en
+    question: "How long do I have to withdraw from the contract?"
+    query: "Widerruf Frist Vertragserklärung"
+    expected: [ergo-zek-2025-04:kib:8#1]
+  - id: first-premium-de
+    question: "Wann ist der erste Beitrag fällig?"
+    query: "Erstbeitrag fällig Zahlung"
+    expected: [ergo-zek-2025-04:avb:4.1, ergo-zek-2025-04:kib:5, ergo-zek-2025-04:ipid:h08]
+  - id: inlays-de
+    question: "Werden Inlays bezahlt?"
+    query: "Inlays Onlays Erstattung"
+    expected: [ergo-ds100-brochure-2026-02:brochure:h05]
+  - id: cleaning-en
+    question: "Is professional teeth cleaning covered?"
+    query: "professionelle Zahnreinigung Prophylaxe"
+    expected: [ergo-zek-2025-04:ipid:h04, ergo-ds100-brochure-2026-02:brochure:h08]
+  - id: cost-example-de
+    question: "Was würde ich bei einer Teleskopversorgung selbst zahlen?"
+    query: "Teleskopversorgung Kostenbeispiel Eigenanteil"
+    expected: [ergo-ds100-brochure-2026-02:brochure:h09]
+  - id: complaint-en
+    question: "Where can I complain if I disagree with a decision?"
+    query: "Beschwerde Ombudsmann Streitbeilegung"
+    expected: [ergo-zek-2025-04:avb:7]
+  - id: out-of-scope-car
+    question: "Does my car insurance cover hail damage?"
+    query: "Kfz-Versicherung Hagelschaden"
+    expected: []
+    reject_by: model
+  - id: out-of-scope-weather
+    question: "Wie wird das Wetter morgen in Berlin?"
+    query: "Wetter morgen Berlin"
+    expected: []
+    reject_by: search
+  - id: out-of-scope-claim-status
+    question: "What is the status of my claim 4711?"
+    query: "Status Schadensfall 4711"
+    expected: []
+    reject_by: search
+  - id: out-of-scope-household
+    question: "Wie kündige ich meine Hausratversicherung?"
+    query: "Hausratversicherung kündigen"
+    expected: []
+    reject_by: model

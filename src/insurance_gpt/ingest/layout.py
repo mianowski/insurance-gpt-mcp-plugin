@@ -84,8 +84,7 @@ def _merge_rows(lines: list[Line], width: float) -> list[Line]:
             (
                 m
                 for m in reversed(merged)
-                if abs(m.y0 - line.y0) <= SAME_ROW_TOLERANCE
-                and (m.column == "right") == (line.column == "right")
+                if abs(m.y0 - line.y0) <= SAME_ROW_TOLERANCE and (m.column == "right") == (line.column == "right")
             ),
             None,
         )
