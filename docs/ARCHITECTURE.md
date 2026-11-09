@@ -72,7 +72,7 @@ flowchart LR
 1. **Manifest** `knowledge/sources.yaml` — one entry per document:
    `doc_id`, title, product/tariff(s), source URL, version/edition date, retrieval date, `sha256`, language.
    Only public documents in the demo; each labelled as such.
-2. **Fetch** — download PDFs to `knowledge/raw/`, verify hash (fail if the document changed silently).
+2. **Fetch** — use `knowledge/raw/<doc_id>.pdf` (committed), downloading it only if missing; verify the hash (fail if the document changed silently).
 3. **Parse** — `pymupdf` / `pymupdf4llm` to text with a **page map** (char offset → page number) and
    heading detection. (Fallback: `docling` if tables/layout parse badly.)
 4. **Chunk** — split along the document's own structure: `§ 4 Umfang der Leistungspflicht → (2) → a)`.
@@ -173,7 +173,7 @@ plugin/
   skills/              # ChatGPT plugin skill(s): conversation guidance, citation rules (WBS 4.1)
 knowledge/
   sources.yaml         # document manifest (versioned)
-  raw/                 # downloaded PDFs (public; gitignored or LFS)
+  raw/                 # source PDFs, <doc_id>.pdf (committed)
   chunks/*.jsonl       # versioned chunks with section/page references
 tests/
   unit/                # chunker, verifier, retrieval

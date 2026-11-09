@@ -52,7 +52,7 @@ docker run --rm -p 8000:8000 insurance-gpt
 
 ```text
 src/insurance_gpt/   server.py (MCP tools), config.py, sources.py (manifest model)
-knowledge/           sources.yaml — versioned list of source documents (raw PDFs are not committed)
+knowledge/           sources.yaml (versioned list of source documents), raw/ (the source PDFs, named <doc_id>.pdf)
 tests/               pytest
 docs/                architecture
 ```
