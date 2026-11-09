@@ -12,8 +12,9 @@ PoC / demo only: it uses **public** documents. Architecture and decisions are in
 | --- | --- |
 | Repo, runtime, config, Docker (WBS 3.1) | done |
 | Source pack manifest `knowledge/sources.yaml` (WBS 2.1) | 2 documents; doc A still needs an official ergo.de URL |
+| Ingestion: PDFs → section-aware chunks with page refs (WBS 2.2) | done, 79 chunks in `knowledge/chunks/` |
 | MCP server (Streamable HTTP, `/mcp`) | running, `list_documents` tool only |
-| Ingestion, retrieval, citations, widget, skill | next |
+| Retrieval (embeddings + Qdrant), citations, widget, skill | next |
 
 ## Requirements
 
@@ -33,6 +34,16 @@ uv run ruff check . && uv run ruff format .
 Ingestion and retrieval dependencies (PDF parsing, embeddings, Qdrant) are an optional extra:
 `uv sync --extra rag`.
 
+### Knowledge base
+
+```bash
+uv run python -m insurance_gpt.ingest build                     # PDFs -> knowledge/chunks/*.jsonl
+uv run python -m insurance_gpt.ingest show ergo-zek-2025-04     # review chunks (--full for whole text)
+```
+
+To add a document: put an entry in `knowledge/sources.yaml` (URL, sha256, `parts` with page ranges and
+structure), run `build`, review with `show`, commit the PDF and the chunk file together.
+
 ### Try the server
 
 - **MCP Inspector:** `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*,
@@ -51,8 +62,8 @@ docker run --rm -p 8000:8000 insurance-gpt
 ## Layout
 
 ```text
-src/insurance_gpt/   server.py (MCP tools), config.py, sources.py (manifest model)
-knowledge/           sources.yaml (versioned list of source documents), raw/ (the source PDFs, named <doc_id>.pdf)
+src/insurance_gpt/   server.py (MCP tools), config.py, sources.py (manifest model), ingest/ (PDF -> chunks)
+knowledge/           sources.yaml (document list), raw/ (source PDFs, <doc_id>.pdf), chunks/ (*.jsonl)
 tests/               pytest
 docs/                architecture
 ```

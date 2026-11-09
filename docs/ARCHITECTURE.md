@@ -67,20 +67,32 @@ flowchart LR
 
 ### 4.1 Ingestion pipeline (offline CLI) — WBS 2.1, 2.2
 
-`python -m insurance_gpt.ingest build`
+`python -m insurance_gpt.ingest build` · review with `python -m insurance_gpt.ingest show <doc_id> --full`
 
 1. **Manifest** `knowledge/sources.yaml` — one entry per document:
-   `doc_id`, title, product/tariff(s), source URL, version/edition date, retrieval date, `sha256`, language.
-   Only public documents in the demo; each labelled as such.
-2. **Fetch** — use `knowledge/raw/<doc_id>.pdf` (committed), downloading it only if missing; verify the hash (fail if the document changed silently).
-3. **Parse** — `pymupdf` / `pymupdf4llm` to text with a **page map** (char offset → page number) and
-   heading detection. (Fallback: `docling` if tables/layout parse badly.)
-4. **Chunk** — split along the document's own structure: `§ 4 Umfang der Leistungspflicht → (2) → a)`.
-   Each chunk keeps: `chunk_id`, `doc_id`, `section_path` (e.g. `§4 (2) a`), `section_title`,
-   `page_start/page_end`, verbatim `text`, plus a short "context header" (doc + section title) prepended
-   *for embedding only*. Oversized sections are split with overlap; tiny ones merged with siblings.
-5. **Embed + index** — dense (multilingual-e5) + sparse (BM25) vectors into Qdrant, payload = metadata.
-6. **Write** `knowledge/chunks/<doc_id>.jsonl` (committed; human-reviewable diff when a document changes).
+   `doc_id`, title, product/tariff(s), source URL, edition, retrieval date, `sha256`, language, and
+   **parts**: the logical documents a PDF bundles, with page ranges and structure type (e.g. the ZEK PDF =
+   product information sheet pp. 1–2, customer information pp. 3–4, terms pp. 5–9).
+   Only public documents in the demo; each labelled as such (`official_source`).
+2. **Fetch** — use `knowledge/raw/<doc_id>.pdf` (committed), downloading it only if missing; verify the
+   hash (fail if the document changed silently).
+3. **Layout** (`ingest/layout.py`, `pymupdf`) — text lines with font size/bold, page headers/footers
+   dropped, two-column pages read left column then right column per band between full-width rows.
+4. **Chunk** (`ingest/chunk.py`) — split along the document's own structure:
+   - `numbered` parts (terms, customer information): bold "`1` title" = section, "`1.2`" = clause;
+     the table of contents and chapter labels are recognised and not mixed into clause text.
+   - `headings` parts (information sheet, brochure): bold text above a size threshold = section.
+   One chunk per clause (or section). Oversized ones are cut at real sentence ends (not after
+   "bzw.", "z. B."), each piece keeping its own page numbers. Each chunk keeps `chunk_id`
+   (e.g. `ergo-zek-2025-04:avb:1.2`), `part_title`, `chapter`, `section`, `section_title`, `clause`,
+   `page_start/page_end` and the verbatim `text` that citations are verified against.
+5. **Write** `knowledge/chunks/<doc_id>.jsonl` (committed; human-reviewable diff when a document changes;
+   a test fails if the committed chunks differ from a fresh build).
+6. **Embed + index** — dense (multilingual-e5) + sparse (BM25) vectors into Qdrant, payload = metadata;
+   embedding text = part title + section title + clause + text (WBS 3.3).
+
+Known limitations: brochure layout is marketing-style, so small stickers/slogans can end up inside a
+neighbouring paragraph ("Neue Leistungen", page-3 slogan). Tables are flattened to text.
 
 ### 4.2 Retrieval service — WBS 3.3
 

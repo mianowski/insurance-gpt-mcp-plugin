@@ -1,6 +1,7 @@
 # Source pack for the demo knowledge base (WBS 2.1 / 2.2).
 # Public documents only. Every citation traces back to doc_id + edition + sha256.
-# The ingestion pipeline downloads each URL and refuses to continue if the hash does not match.
+# PDFs live in knowledge/raw/<doc_id>.pdf; ingestion downloads a missing one from `url` and refuses to
+# continue if the sha256 does not match. `parts` split a PDF into the logical documents it bundles.
 version: 1
 documents:
   - doc_id: ergo-zek-2025-04
@@ -15,6 +16,23 @@ documents:
     retrieved: 2026-11-05
     sha256: 9a12494a1d6f4267287f3dec85444b1cccfe6c8881077c5fcd310c06015467fc
     notes: "Broker-hosted copy. Replace with the official ergo.de download of the same edition before the demo."
+    parts:
+      - part_id: ipid
+        title: "Informationsblatt zu Versicherungsprodukten (Tarif ZEK)"
+        first_page: 1
+        last_page: 2
+        structure: headings
+        heading_min_size: 10.5
+      - part_id: kib
+        title: "Kundeninformation nach § 1 VVG-InfoV (Tarif ZEK)"
+        first_page: 3
+        last_page: 4
+        structure: numbered
+      - part_id: avb
+        title: "Versicherungsbedingungen – Vertragsgrundlage Tarif ZEK"
+        first_page: 5
+        last_page: 9
+        structure: numbered
 
   - doc_id: ergo-ds100-brochure-2026-02
     title: "Dental-Schutz 100 – Produktbroschüre"
@@ -27,3 +45,11 @@ documents:
     official_source: true
     retrieved: 2026-11-05
     sha256: e11bff42f991987ca5ead7922c2a36c1d78048c344f6610ca46fda79bc0f23c3
+    parts:
+      # Page 1 is the cover, page 4 contact details and ratings.
+      - part_id: brochure
+        title: "Produktbroschüre Dental-Schutz 100"
+        first_page: 2
+        last_page: 3
+        structure: headings
+        heading_min_size: 13.2
