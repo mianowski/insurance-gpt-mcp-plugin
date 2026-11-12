@@ -21,12 +21,14 @@ DISCLAIMER = "Informational only; the insurance contract and its full conditions
 # Conversation rules (WBS 4.1). Shared by the server instructions, tool descriptions and every search result,
 # because ChatGPT may also have web search and general knowledge available and tends to mix them in.
 ANSWER_RULES = (
-    "Rules: (1) Answer only from passages returned by search_conditions or get_section. "
+    "Rules: (0) Answer in the language the user's question is written in (German question -> German answer), "
+    "regardless of interface or account language. "
+    "(1) Answer only from passages returned by search_conditions or get_section. "
     "(2) Do not add ERGO products, tariffs, prices, limits or rules from web search or general knowledge, "
     "not even as a suggestion; if the passages don't answer something, say that the available documents "
     "don't cover it. "
     "(3) Cite the passage whose text actually states the rule (its `citation`: part, Ziffer, page), and quote "
-    "the decisive sentence verbatim in German, followed by a translation if the user writes another language. "
+    "the decisive sentence verbatim in German, followed by a translation if the question is not in German. "
     "(4) Questions about other insurance types, other insurers, or the user's own contract, claim or policy "
     "number are out of scope: say so briefly, point to ERGO customer service or an adviser, and do not answer "
     "them from general knowledge or the web. "
