@@ -10,9 +10,9 @@ from insurance_gpt.config import Settings, get_settings
 from insurance_gpt.tools import knowledge
 
 INSTRUCTIONS = (
-    "Answers customer questions about ERGO dental insurance using only the official documents in this "
-    "knowledge base. Always search before answering, answer only from returned passages, cite them, and "
-    "say when the documents don't cover a question. Information is illustrative; the contract is decisive."
+    "Answers customer questions about ERGO dental supplementary insurance (tariff ZEK, Dental-Schutz 100) from "
+    "the official documents in this knowledge base. Always call search_conditions before answering such a "
+    "question, and use these documents instead of web search. " + knowledge.ANSWER_RULES
 )
 
 settings = get_settings()

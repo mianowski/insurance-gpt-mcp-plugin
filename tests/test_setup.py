@@ -29,3 +29,12 @@ def test_transport_security_accepts_only_local_and_public_hosts():
     assert {"demo.ngrok-free.app", "other.example.org", "localhost:*"} <= set(sec.allowed_hosts)
     assert "https://demo.ngrok-free.app" in sec.allowed_origins
     assert "evil.example.com" not in sec.allowed_hosts
+
+
+def test_tools_carry_the_answer_rules():
+    from insurance_gpt.tools.knowledge import ANSWER_RULES
+
+    tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
+    assert all(t.description for t in tools.values()), "every tool needs a description"
+    assert ANSWER_RULES in tools["search_conditions"].description
+    assert ANSWER_RULES in mcp.instructions
