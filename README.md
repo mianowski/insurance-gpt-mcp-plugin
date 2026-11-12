@@ -59,6 +59,9 @@ structure), run `build`, review with `show`, commit the PDF and the chunk file t
 
 ## Connect to ChatGPT
 
+Full step-by-step guide (host and tester, checks, troubleshooting):
+[docs/CHATGPT_PLUGIN_SETUP.md](docs/CHATGPT_PLUGIN_SETUP.md). Short version:
+
 ChatGPT needs a public HTTPS URL. For development, tunnel the local server with ngrok (free account,
 one free static domain, so the URL stays the same between sessions):
 
