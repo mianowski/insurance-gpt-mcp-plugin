@@ -19,11 +19,11 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked --all-groups
-      - run: tar -czf .venv.tar.gz .venv
+      - run: tar -czf python-environment.tar.gz .venv
       - uses: actions/upload-artifact@v4
         with:
           name: python-environment
-          path: .venv.tar.gz
+          path: python-environment.tar.gz
           if-no-files-found: error
 
   lint:
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: python-environment
-      - run: tar -xzf .venv.tar.gz
+      - run: tar -xzf python-environment.tar.gz
       - run: uv run --no-sync ruff check .
 
   test:
@@ -57,5 +57,5 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: python-environment
-      - run: tar -xzf .venv.tar.gz
+      - run: tar -xzf python-environment.tar.gz
       - run: uv run --no-sync pytest
