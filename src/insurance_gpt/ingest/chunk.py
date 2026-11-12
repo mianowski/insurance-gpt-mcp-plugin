@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from pydantic import BaseModel
 
 from insurance_gpt.ingest.layout import Line
+from insurance_gpt.ingest.tables import TableInfo
 from insurance_gpt.sources import DocumentPart, SourceDocument
 
 SECTION_RE = re.compile(r"^(\d{1,2})\s+(\S.*)$")
@@ -155,18 +156,33 @@ def _numbered_units(lines: list[Line]) -> list[_Unit]:
     return units
 
 
-def _heading_units(lines: list[Line], min_size: float) -> list[_Unit]:
+def _is_heading(line: Line, part: DocumentPart) -> bool:
+    if part.title_min_size is not None and line.size >= part.title_min_size:
+        return True
+    # "Kernleistung:" style bold labels belong to the text below them, not a new section.
+    return line.bold and line.size >= part.heading_min_size and not line.text.endswith(":")
+
+
+def _heading_units(lines: list[Line], part: DocumentPart) -> list[_Unit]:
     units = [_Unit(chapter=None, section=None, section_title="Einleitung", clause=None)]
-    prev_heading = False
+    prev: Line | None = None
     for line in lines:
-        is_heading = line.bold and line.size >= min_size
-        if is_heading and prev_heading:
+        is_heading = _is_heading(line, part)
+        # A wrapped heading continues only in the same style, close below ("Zahnersatz" 18pt ≠ "Dental-Schutz 90" 9pt).
+        continues = (
+            prev is not None
+            and _is_heading(prev, part)
+            and abs(prev.size - line.size) < 0.5
+            and prev.page == line.page
+            and 0 <= line.y0 - prev.y0 <= line.size * 2
+        )
+        if is_heading and continues:
             units[-1].section_title += f" {line.text}"
         elif is_heading:
             units.append(_Unit(chapter=None, section=None, section_title=line.text, clause=None))
         else:
             units[-1].lines.append(line)
-        prev_heading = is_heading
+        prev = line
     return units
 
 
@@ -196,8 +212,39 @@ def _page_at(offsets: list[tuple[int, int]], pos: int) -> int:
     return [page for offset, page in offsets if offset <= pos][-1]
 
 
-def chunk_part(doc: SourceDocument, part: DocumentPart, lines: list[Line]) -> list[Chunk]:
-    units = _numbered_units(lines) if part.structure == "numbered" else _heading_units(lines, part.heading_min_size)
+def _table_chunks(doc: SourceDocument, part: DocumentPart, tables: list[TableInfo]) -> list[Chunk]:
+    """One chunk per table row: "<row label>" followed by "<tariff>: <cell>" lines, plus the table's notes."""
+    chunks = []
+    for t_no, info in enumerate(tables, start=1):
+        table = info.table
+        for r_no, (label, cells) in enumerate(table.rows, start=1):
+            filled = [(name, cell) for name, cell in zip(table.columns, cells, strict=True) if cell]
+            if not filled:
+                continue  # group label row without values ("Allgemeines")
+            row_title = f"{table.label_header}: {label}" if table.label_header else label
+            text = "\n".join([row_title, *(f"{name}: {cell}" for name, cell in filled), *info.notes])
+            chunks.append(
+                Chunk(
+                    chunk_id=f"{doc.doc_id}:{part.part_id}:t{t_no}.r{r_no}",
+                    doc_id=doc.doc_id,
+                    part_id=part.part_id,
+                    part_title=part.title,
+                    chapter=info.title,
+                    section=None,
+                    section_title=" ".join(row_title.split()),
+                    clause=None,
+                    page_start=table.page,
+                    page_end=table.page,
+                    text=text,
+                )
+            )
+    return chunks
+
+
+def chunk_part(
+    doc: SourceDocument, part: DocumentPart, lines: list[Line], tables: list[TableInfo] | None = None
+) -> list[Chunk]:
+    units = _numbered_units(lines) if part.structure == "numbered" else _heading_units(lines, part)
     chunks: list[Chunk] = []
     heading_no = 0
     for unit in units:
@@ -226,4 +273,4 @@ def chunk_part(doc: SourceDocument, part: DocumentPart, lines: list[Line]) -> li
                     text=text[start:end].strip(),
                 )
             )
-    return chunks
+    return chunks + _table_chunks(doc, part, tables or [])

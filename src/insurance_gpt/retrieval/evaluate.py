@@ -55,9 +55,25 @@ class Report:
         return sum(not o.relevant for o in self.search_rejects) / len(self.search_rejects)
 
 
+SHORTHANDS = {
+    "U:": "ergo-zahntarife-uebersicht-2024-08:uebersicht:",
+    "B:": "ergo-zahn-broschuere-2022-07:broschuere:",
+}
+
+
+def _expand(chunk_id: str) -> str:
+    for short, full in SHORTHANDS.items():
+        if chunk_id.startswith(short):
+            return full + chunk_id[len(short) :]
+    return chunk_id
+
+
 def load_questions(path: Path = QUESTIONS_FILE) -> list[dict]:
     with path.open(encoding="utf-8") as f:
-        return yaml.safe_load(f)["questions"]
+        questions = yaml.safe_load(f)["questions"]
+    for q in questions:
+        q["expected"] = [_expand(cid) for cid in q["expected"]]
+    return questions
 
 
 def evaluate(retriever: Retriever, untranslated: bool = False, k: int = 5) -> Report:

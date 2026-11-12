@@ -99,20 +99,23 @@ def _passage(retriever: Retriever, chunk: Chunk, relevance: float | None = None)
 
 
 def list_documents() -> DocumentList:
-    """List the documents this plugin answers from: ERGO dental supplementary insurance only (tariff ZEK
-    "Zahnersatz Sofort" and the Dental-Schutz 100 brochure).
+    """List the documents this plugin answers from: ERGO dental supplementary insurance (Zahn-Zusatzversicherung)
+    only, with the tariffs each document covers.
 
     Call it when the user asks what is covered, or when a question might be about another product. Anything
     outside these documents is out of scope; do not answer it from general knowledge or the web.
     """
     documents = get_retriever().store.documents.values()
+    products = list(dict.fromkeys(p for d in documents for p in d.products))
     log.info("list_documents")
     return DocumentList(
         documents=[
             DocumentInfo(**d.model_dump(mode="json", include=set(DocumentInfo.model_fields))) for d in documents
         ],
         scope_note=(
-            "Only these ERGO dental insurance documents are covered. Questions about other insurance types "
+            "Only these ERGO dental insurance documents are covered (tariffs: "
+            + ", ".join(products)
+            + "). Questions about other insurance types "
             "(car, household, life, …), other insurers, or a customer's own contract or claim are out of scope: "
             "say so and do not answer them from general knowledge or web search."
         ),
@@ -135,7 +138,8 @@ def search_conditions(
     doc_id: Annotated[str | None, Field(description="Restrict to one document (doc_id from list_documents).")] = None,
     top_k: Annotated[int, Field(ge=1, le=10, description="Number of passages to return.")] = 5,
 ) -> SearchResult:
-    """Search the ERGO dental insurance documents (tariff ZEK, Dental-Schutz 100) and return the most relevant
+    """Search the ERGO dental supplementary insurance documents (all tariffs listed by list_documents) and return
+    the most relevant
     source passages with citations.
 
     Call this BEFORE answering any question about these products: coverage, exclusions, limits, waiting

@@ -15,9 +15,13 @@ class DocumentPart(BaseModel):
     title: str
     first_page: int
     last_page: int
-    # numbered: "1 Title" bold headings with "1.2" clauses (terms); headings: bold text >= heading_min_size
-    structure: Literal["numbered", "headings"]
+    # numbered: "1 Title" bold headings with "1.2" clauses (terms).
+    # headings: sections start at bold text >= heading_min_size (not "Label:" lines) or any text >= title_min_size.
+    # mixed: headings, plus tariff comparison tables (header row matching table_headers) chunked row by row.
+    structure: Literal["numbered", "headings", "mixed"]
     heading_min_size: float = 0.0
+    title_min_size: float | None = None
+    table_headers: str | None = None  # regex for tariff names in table header cells
 
 
 class SourceDocument(BaseModel):
@@ -36,6 +40,8 @@ class SourceDocument(BaseModel):
     # Lines this close to the top/bottom page edge (pt) are running headers/footers and are dropped.
     header_margin: float = 40.0
     footer_margin: float = 45.0
+    # Brochures printed as two-page spreads: landscape pages are parsed as a left and a right half.
+    split_spreads: bool = False
     notes: str | None = None
 
 

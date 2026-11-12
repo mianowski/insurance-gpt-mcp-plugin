@@ -10,7 +10,7 @@ from insurance_gpt.config import Settings, get_settings
 from insurance_gpt.tools import knowledge
 
 INSTRUCTIONS = (
-    "Answers customer questions about ERGO dental supplementary insurance (tariff ZEK, Dental-Schutz 100) from "
+    "Answers customer questions about ERGO dental supplementary insurance (Zahn-Zusatzversicherung) from "
     "the official documents in this knowledge base. Always call search_conditions before answering such a "
     "question, and use these documents instead of web search. " + knowledge.ANSWER_RULES
 )

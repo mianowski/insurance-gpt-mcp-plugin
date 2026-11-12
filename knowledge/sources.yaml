@@ -2,54 +2,54 @@
 # Public documents only. Every citation traces back to doc_id + edition + sha256.
 # PDFs live in knowledge/raw/<doc_id>.pdf; ingestion downloads a missing one from `url` and refuses to
 # continue if the sha256 does not match. `parts` split a PDF into the logical documents it bundles.
-version: 1
+#
+# 2026-11-12: replaced the ZEK terms + DS100 brochure with these two (chosen by the team as better suited
+# for the demo: they cover the whole ERGO dental range in comparable tariff tables).
+version: 2
 documents:
-  - doc_id: ergo-zek-2025-04
-    title: "Zahnzusatzversicherung Zahnersatz Sofort (Tarif ZEK) – Informationsblatt und Allgemeine Versicherungsbedingungen"
+  - doc_id: ergo-zahntarife-uebersicht-2024-08
+    title: "ERGO Zahn-Zusatzversicherung – Tarifübersicht (Dental-Vorsorge, Dental-Schutz)"
     issuer: ERGO Krankenversicherung AG
-    products: [ZEK]
-    doc_type: terms
+    products: [DVB, DVE, DS75, DS90, DS100]
+    doc_type: product_info
     language: de
-    edition: "04/2025"
-    url: "https://rest.zahnzusatzversicherung-experten.com/filestore/documents/ERGO.AVB.Tarif%20ZEK.04-2024.pdf"
-    official_source: false
-    retrieved: 2026-11-05
-    sha256: 9a12494a1d6f4267287f3dec85444b1cccfe6c8881077c5fcd310c06015467fc
-    notes: "Broker-hosted copy. Replace with the official ergo.de download of the same edition before the demo."
+    edition: "08/2024"
+    url: "https://www.ergo.de/content/dam/ergo/pdf/kranken/zahnzusatz/zahntarife-uebersicht.pdf.coredownload.pdf"
+    official_source: true
+    retrieved: 2026-11-12
+    sha256: 5e0929472e41a7257e71eaab5d09f71a4e7942bb354c8012c4dbfb22edfae138
+    header_margin: 32  # running header at y≈22; page titles start at y≈38
     parts:
-      - part_id: ipid
-        title: "Informationsblatt zu Versicherungsprodukten (Tarif ZEK)"
+      # p. 1: tariff cards (core benefits, specials); pp. 2–3: comparison tables Zahnerhalt / Zahnersatz.
+      - part_id: uebersicht
+        title: "Tarifübersicht Zahn-Zusatzversicherung"
         first_page: 1
-        last_page: 2
-        structure: headings
-        heading_min_size: 10.5
-      - part_id: kib
-        title: "Kundeninformation nach § 1 VVG-InfoV (Tarif ZEK)"
-        first_page: 3
-        last_page: 4
-        structure: numbered
-      - part_id: avb
-        title: "Versicherungsbedingungen – Vertragsgrundlage Tarif ZEK"
-        first_page: 5
-        last_page: 9
-        structure: numbered
+        last_page: 3
+        structure: mixed
+        heading_min_size: 9
+        title_min_size: 18
+        table_headers: "^(Dental-(Schutz|Vorsorge)|Zahnersatz Sofort|Kieferorthopädie Sofort|DS[0-9]|DVB|DVE)"
 
-  - doc_id: ergo-ds100-brochure-2026-02
-    title: "Dental-Schutz 100 – Produktbroschüre"
+  - doc_id: ergo-zahn-broschuere-2022-07
+    title: "ERGO Zahn-Zusatzversicherungen – Produktbroschüre (Dental-Tarife, Zahnersatz Sofort, Kieferorthopädie Sofort)"
     issuer: ERGO Krankenversicherung AG
-    products: [DS100]
+    products: [DVB, DVE, DS75, DS90, DS100, ZEZ, KFO]
     doc_type: brochure
     language: de
-    edition: "11.02.2026"
-    url: "https://www.ergo.de/content/dam/ergo/pdf/kranken/zahnzusatz/dentalschutz-ds100.pdf.coredownload.pdf"
+    edition: "Beiträge Stand 01.07.2022"
+    url: "https://www.ergo.de/content/dam/ergo/pdf/kranken/zahnzusatz/zahn_broschuere.pdf.coredownload.pdf"
     official_source: true
-    retrieved: 2026-11-05
-    sha256: e11bff42f991987ca5ead7922c2a36c1d78048c344f6610ca46fda79bc0f23c3
+    retrieved: 2026-11-12
+    sha256: e248de801e46baf101e90484e872d363d39743f32182447de958d707f79df3b8
+    split_spreads: true
     parts:
-      # Page 1 is the cover, page 4 contact details and ratings.
-      - part_id: brochure
-        title: "Produktbroschüre Dental-Schutz 100"
+      # p. 1 is the cover, p. 11 contact details and the advertising objection notice.
+      # pp. 7–10: benefit tables per tariff ("Unsere Leistungen im Detail") and monthly premiums by entry age.
+      - part_id: broschuere
+        title: "Produktbroschüre Zahn-Zusatzversicherungen"
         first_page: 2
-        last_page: 3
-        structure: headings
-        heading_min_size: 13.2
+        last_page: 10
+        structure: mixed
+        heading_min_size: 9
+        title_min_size: 18
+        table_headers: "^(Dental-(Schutz|Vorsorge)|Zahnersatz Sofort|Kieferorthopädie Sofort|DS[0-9]|DVB|DVE)"

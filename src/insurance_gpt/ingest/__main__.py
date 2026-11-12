@@ -7,13 +7,15 @@ uv run python -m insurance_gpt.ingest index                   # embed chunks →
 
 import argparse
 import logging
+import re
 import sys
 from pathlib import Path
 
 from insurance_gpt.config import get_settings
 from insurance_gpt.ingest.chunk import Chunk, chunk_part
 from insurance_gpt.ingest.fetch import ensure_pdf
-from insurance_gpt.ingest.layout import extract_lines
+from insurance_gpt.ingest.layout import extract_lines, extract_regions
+from insurance_gpt.ingest.tables import extract_part
 from insurance_gpt.retrieval.store import read_chunks
 from insurance_gpt.sources import SourceDocument, load_manifest
 
@@ -26,8 +28,13 @@ def build_document(doc: SourceDocument, knowledge_dir: Path) -> list[Chunk]:
     pdf = ensure_pdf(doc, knowledge_dir / "raw")
     chunks: list[Chunk] = []
     for part in doc.parts:
-        lines = extract_lines(pdf, part.first_page, part.last_page, doc.header_margin, doc.footer_margin)
-        chunks.extend(chunk_part(doc, part, lines))
+        pages = (pdf, part.first_page, part.last_page, doc.header_margin, doc.footer_margin, doc.split_spreads)
+        if part.structure == "mixed":
+            regions = extract_regions(*pages)
+            lines, tables = extract_part(regions, re.compile(part.table_headers or "$^"))
+            chunks.extend(chunk_part(doc, part, lines, tables))
+        else:
+            chunks.extend(chunk_part(doc, part, extract_lines(*pages)))
     ids = [c.chunk_id for c in chunks]
     duplicates = {i for i in ids if ids.count(i) > 1}
     if duplicates:

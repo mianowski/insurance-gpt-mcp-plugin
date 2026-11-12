@@ -71,28 +71,41 @@ flowchart LR
 
 1. **Manifest** `knowledge/sources.yaml` — one entry per document:
    `doc_id`, title, product/tariff(s), source URL, edition, retrieval date, `sha256`, language, and
-   **parts**: the logical documents a PDF bundles, with page ranges and structure type (e.g. the ZEK PDF =
-   product information sheet pp. 1–2, customer information pp. 3–4, terms pp. 5–9).
+   **parts**: the logical documents a PDF bundles, with page ranges and structure type, plus layout
+   options (`split_spreads` for brochures printed as two-page spreads, header/footer margins).
    Only public documents in the demo; each labelled as such (`official_source`).
 2. **Fetch** — use `knowledge/raw/<doc_id>.pdf` (committed), downloading it only if missing; verify the
    hash (fail if the document changed silently).
 3. **Layout** (`ingest/layout.py`, `pymupdf`) — text lines with font size/bold, page headers/footers
-   dropped, two-column pages read left column then right column per band between full-width rows.
+   dropped, ligatures and soft hyphens normalised. Spread pages are split into two regions. Reading order:
+   PDF text blocks stacked at the same x stay together (e.g. a tariff card), stacks are ordered left
+   column then right column per band between full-width rows.
 4. **Chunk** (`ingest/chunk.py`) — split along the document's own structure:
    - `numbered` parts (terms, customer information): bold "`1` title" = section, "`1.2`" = clause;
      the table of contents and chapter labels are recognised and not mixed into clause text.
-   - `headings` parts (information sheet, brochure): bold text above a size threshold = section.
-   One chunk per clause (or section). Oversized ones are cut at real sentence ends (not after
+   - `headings` parts: bold text above a size threshold (not "Label:" lines) or large titles = section.
+   - `mixed` parts (`ingest/tables.py`): headings, plus **tariff comparison tables**, found by a header
+     row of tariff names (`table_headers` regex) with the tariff codes below. Cells are assigned by
+     geometry: column = nearest tariff header to the left (a line reaching into further columns is a
+     merged cell for all of them); row = the label closest to the cell block's centre (labels may be
+     top-aligned or vertically centred). Text only under the first tariff is a merged cell for all
+     tariffs ("Keine Wartezeiten."). Each **row** becomes one chunk, e.g. "Tarifleistungen: Implantate /
+     Dental-Schutz 75 (DS75): Wie Zahnersatz / …", with the table title as chapter and the table's small
+     print (e.g. "Monatliche Beiträge … Stand 01.07.2022") appended. Side-by-side tariff cards are not
+     mistaken for tables (a tariff name in the label column).
+   One chunk per clause, section or table row. Oversized ones are cut at real sentence ends (not after
    "bzw.", "z. B."), each piece keeping its own page numbers. Each chunk keeps `chunk_id`
-   (e.g. `ergo-zek-2025-04:avb:1.2`), `part_title`, `chapter`, `section`, `section_title`, `clause`,
+   (e.g. `ergo-zahn-broschuere-2022-07:broschuere:t12.r2` = table 12, row 2), `part_title`, `chapter`,
+   `section`, `section_title`, `clause`,
    `page_start/page_end` and the verbatim `text` that citations are verified against.
 5. **Write** `knowledge/chunks/<doc_id>.jsonl` (committed; human-reviewable diff when a document changes;
    a test fails if the committed chunks differ from a fresh build).
 6. **Embed + index** — dense (multilingual-e5) + sparse (BM25) vectors into Qdrant, payload = metadata;
    embedding text = part title + section title + clause + text (WBS 3.3).
 
-Known limitations: brochure layout is marketing-style, so small stickers/slogans can end up inside a
-neighbouring paragraph ("Neue Leistungen", page-3 slogan). Tables are flattened to text.
+Known limitations: marketing layouts (image captions, stickers) produce a few tiny chunks; tables without
+a recognisable tariff header are read as running text; the overview's tables repeat in the brochure, so
+search can return both copies. The `numbered` mode (terms with clauses) is kept for future AVB documents.
 
 ### 4.2 Retrieval service — WBS 3.3
 
@@ -105,8 +118,8 @@ neighbouring paragraph ("Neue Leistungen", page-3 slogan). Tables are flattened 
 - **Relevance threshold** (`IGPT_MIN_RELEVANCE`, 0.81): best cosine similarity of the hits; below it the
   tool returns `status: "no_relevant_passage"`, so the model says the documents don't cover the question.
 - **Query language matters**: the tool *requires* a German `query`. Eval with German queries:
-  hit@5 1.00, hit@1 0.88, MRR 0.93; with raw English questions only: hit@5 0.62 (BM25 can't match English
-  to German, cross-lingual similarity is lower).
+  hit@5 1.00, hit@1 0.88, MRR 0.93; with raw English questions only: hit@5 0.56 (BM25 can't match English
+  to German, cross-lingual similarity is lower). (Source pack of 2026-11-12; the earlier pack scored the same.)
 - **Scope limits of similarity**: unrelated questions (weather, a claim number) are rejected, but other
   insurance products on topics the documents cover ("cancel my household insurance") look relevant to
   search. Those are declined by the model, using `list_documents.scope_note` and the skill (eval:
@@ -114,8 +127,8 @@ neighbouring paragraph ("Neue Leistungen", page-3 slogan). Tables are flattened 
 - Reranker (e.g. `bge-reranker-v2-m3`) not needed at current eval results; revisit when the corpus grows.
 - Eval: `tests/eval/questions.yaml` (20 DE/EN questions with expected chunks),
   `python -m insurance_gpt.retrieval.evaluate [--untranslated]`; `pytest` enforces hit@5 ≥ 0.9, MRR ≥ 0.85
-  and rejection of unrelated questions. The threshold margin is thin (unrelated max 0.798, in-scope min
-  0.821): grow the eval set with the WBS 1.2 scenarios before relying on it.
+  and rejection of unrelated questions. The threshold margin is thin (unrelated max 0.803, in-scope min
+  0.829): grow the eval set with the WBS 1.2 scenarios before relying on it.
 
 ### 4.3 MCP server and tools — WBS 3.2, 4.1, 4.5, 4.6
 
@@ -264,15 +277,18 @@ Decided (2026-11-05):
 - Languages: English and German (questions and answers); quotes shown in original German.
 - Hosting: private resources, tunnel for dev → small EU VM for the hosted demo (D9).
 - Embeddings: local multilingual model for the demo; long-term choice deferred to ERGO if approved.
-- Source pack (2026-11-05): **A** ERGO Krankenversicherung AG — *Zahnersatz Sofort, Tarif ZEK*, Stand 04/2025
-  (IPID + AVB, 9 pp.); **B** ERGO *Dental-Schutz 100* product brochure (ergo.de, 4 pp.).
+- Source pack (2026-11-12, replaces the ZEK terms + DS100 brochure of 2026-11-05, chosen by the team):
+  ERGO **Tarifübersicht** Zahn-Zusatzversicherung (Stand 08/2024, 3 pp.) and ERGO **Produktbroschüre**
+  Zahn-Zusatzversicherungen (premiums Stand 01.07.2022, 11 pp.), both official ergo.de downloads. Together:
+  Dental-Vorsorge DVB/DVE, Dental-Schutz 75/90/100, Zahnersatz Sofort (ZEZ), Kieferorthopädie Sofort (KFO),
+  incl. monthly premiums by entry age.
 - Terminology (2026-11-05): OpenAI now calls these **plugins** (MCP server + skills + optional UI).
 
 Open:
 
-1. Official ergo.de copy of document A (found so far only on a broker site) — must be replaced before
-   it goes into the source pack.
-2. Domain/subdomain for the hosted demo.
+1. Domain/subdomain for the hosted demo.
+2. The brochure's premiums are from 01.07.2022: confirm with the team whether they are current enough to
+   show in the demo.
 
 ## 12. Build order for the demo
 

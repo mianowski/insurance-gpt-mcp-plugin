@@ -40,19 +40,20 @@ def test_search_returns_citable_passages(retriever):
     result = _call(
         "search_conditions",
         {
-            "query": "Implantate Leistung Ausschluss",
-            "question": "Does ZEK pay for implants?",
-            "doc_id": "ergo-zek-2025-04",
+            "query": "Zahnersatz Sofort ZEZ Implantate",
+            "question": "Does Zahnersatz Sofort cover implants?",
+            "doc_id": "ergo-zahn-broschuere-2022-07",
         },
     )
     assert not result.is_error
     data = result.structured_content
     assert data["status"] == "ok"
-    exclusion = next(p for p in data["passages"] if p["chunk_id"] == "ergo-zek-2025-04:avb:1.2")
-    assert exclusion["citation"] == "Versicherungsbedingungen – Vertragsgrundlage Tarif ZEK, Ziffer 1.2, S. 6"
-    assert exclusion["url"].endswith(".pdf#page=6")
-    assert "Implantate" in exclusion["text"]
-    assert all(p["chunk_id"].startswith("ergo-zek-2025-04:") for p in data["passages"])
+    row = data["passages"][0]
+    assert row["chunk_id"] == "ergo-zahn-broschuere-2022-07:broschuere:t12.r2"
+    assert row["citation"] == "Produktbroschüre Zahn-Zusatzversicherungen, „Sofortschutz – Implantate“, S. 10"
+    assert row["url"].endswith(".pdf.coredownload.pdf#page=10")
+    assert "Zahnersatz Sofort (ZEZ): Nein." in row["text"]
+    assert all(p["chunk_id"].startswith("ergo-zahn-broschuere-2022-07:") for p in data["passages"])
 
 
 def test_unrelated_question_returns_no_passages(retriever):
@@ -61,12 +62,12 @@ def test_unrelated_question_returns_no_passages(retriever):
     assert data["passages"] == []
 
 
-def test_get_section_returns_all_clauses(retriever):
-    data = _call("get_section", {"chunk_id": "ergo-zek-2025-04:avb:1.2"}).structured_content
+def test_get_section_returns_the_whole_table(retriever):
+    row_id = "ergo-zahntarife-uebersicht-2024-08:uebersicht:t2.r2"  # Implantate in the Dental-Schutz table
+    data = _call("get_section", {"chunk_id": row_id}).structured_content
     ids = [p["chunk_id"] for p in data["passages"]]
-    assert ids[0] == "ergo-zek-2025-04:avb:1.1#1"
-    assert "ergo-zek-2025-04:avb:1.5" in ids
-    assert all(i.startswith("ergo-zek-2025-04:avb:1.") for i in ids)
+    assert row_id in ids and len(ids) > 5
+    assert all(i.startswith("ergo-zahntarife-uebersicht-2024-08:uebersicht:t2.r") for i in ids)
 
 
 @pytest.mark.parametrize(
@@ -83,5 +84,8 @@ def test_invalid_ids_raise_tool_errors(retriever, tool, args):
 
 def test_list_documents(retriever):
     data = _call("list_documents", {}).structured_content
-    assert {d["doc_id"] for d in data["documents"]} == {"ergo-zek-2025-04", "ergo-ds100-brochure-2026-02"}
-    assert "out of scope" in data["scope_note"]
+    assert {d["doc_id"] for d in data["documents"]} == {
+        "ergo-zahntarife-uebersicht-2024-08",
+        "ergo-zahn-broschuere-2022-07",
+    }
+    assert "out of scope" in data["scope_note"] and "DS100" in data["scope_note"]

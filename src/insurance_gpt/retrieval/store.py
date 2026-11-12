@@ -1,9 +1,12 @@
 """Knowledge store: the committed chunks plus the manifest, with citation labels and PDF deep links."""
 
+import re
 from pathlib import Path
 
 from insurance_gpt.ingest.chunk import Chunk
 from insurance_gpt.sources import SourceDocument, load_manifest
+
+TABLE_ROW_RE = re.compile(r"[.]r[0-9]+$")
 
 
 def read_chunks(path: Path) -> list[Chunk]:
@@ -12,11 +15,12 @@ def read_chunks(path: Path) -> list[Chunk]:
 
 
 def section_key(chunk: Chunk) -> str:
-    """Chunks with the same key form one section: "doc:part:4" for numbered parts, else the heading id."""
+    """Chunks with the same key form one section: "doc:part:4" for numbered parts, the whole table for table
+    rows ("doc:part:t2.r5" -> "doc:part:t2"), else the heading id."""
     base = chunk.chunk_id.split("#")[0]
     if chunk.section is not None:
         return f"{chunk.doc_id}:{chunk.part_id}:{chunk.section}"
-    return base
+    return TABLE_ROW_RE.sub("", base)
 
 
 class KnowledgeStore:
@@ -37,7 +41,8 @@ class KnowledgeStore:
         if chunk.clause or chunk.section:
             where = f"Ziffer {chunk.clause or chunk.section}"
         else:
-            where = f"„{chunk.section_title.rstrip(':')}“"
+            title = chunk.section_title.rstrip(":")
+            where = f"„{chunk.chapter} – {title}“" if chunk.chapter else f"„{title}“"
         return f"{chunk.part_title}, {where}, {self.pages(chunk)}"
 
     @staticmethod

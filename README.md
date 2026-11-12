@@ -12,7 +12,7 @@ PoC / demo only: it uses **public** documents. Architecture and decisions are in
 | --- | --- |
 | Repo, runtime, config, Docker (WBS 3.1) | done |
 | Source pack manifest `knowledge/sources.yaml` (WBS 2.1) | 2 documents; doc A still needs an official ergo.de URL |
-| Ingestion: PDFs → section-aware chunks with page refs (WBS 2.2) | done, 79 chunks in `knowledge/chunks/` |
+| Ingestion: PDFs → sections and tariff-table rows with page refs (WBS 2.2) | done, 152 chunks in `knowledge/chunks/` |
 | Retrieval: hybrid search (e5-large + BM25, Qdrant), eval set (WBS 3.3) | done, hit@5 1.00, MRR 0.93 |
 | MCP server (Streamable HTTP, `/mcp`): `list_documents`, `search_conditions`, `get_section` | done |
 | Citation verification + widget (`show_citation`), skill, ChatGPT connection | next |
@@ -40,7 +40,7 @@ large embedding model are skipped when the model is not available in the CI envi
 
 ```bash
 uv run python -m insurance_gpt.ingest build                     # PDFs -> knowledge/chunks/*.jsonl
-uv run python -m insurance_gpt.ingest show ergo-zek-2025-04     # review chunks (--full for whole text)
+uv run python -m insurance_gpt.ingest show ergo-zahn-broschuere-2022-07   # review chunks (--full: whole text)
 uv run python -m insurance_gpt.ingest index                     # embed chunks (downloads e5-large, ~2.2 GB)
 uv run python -m insurance_gpt.retrieval.evaluate               # search quality on tests/eval/questions.yaml
 ```
@@ -73,7 +73,7 @@ one free static domain, so the URL stays the same between sessions):
 4. In ChatGPT: chatgpt.com/plugins → **+** → *Add custom MCP server* → name `ERGO Dental (demo)`,
    URL `https://<your-domain>.ngrok-free.app/mcp`, authentication *None* → accept the warning →
    *Create as a plugin*. Install it from your personal plugins (chatgpt.com/plugins?view=personal).
-5. Open a **Work** chat, type `@`, pick the plugin and ask, e.g. *"Zahlt der Tarif ZEK für Implantate?"*
+5. Open a **Work** chat, type `@`, pick the plugin and ask, e.g. *"Zahlt Dental-Schutz 90 für Implantate?"*
 
 The server has no authentication yet: only keep the tunnel running while you test.
 

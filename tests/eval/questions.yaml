@@ -3,73 +3,76 @@
 # expected: chunk ids that answer the question (a hit on any of them counts); [] = out of scope.
 # reject_by (out of scope only): "search" = must come back as "no_relevant_passage" (unrelated topics);
 # "model" = other insurance products on topics the documents do cover (e.g. cancelling a contract). Search
-# can't tell those apart by similarity; ChatGPT must decline them using list_documents and the skill.
+# can't tell those apart by similarity; ChatGPT must decline them using list_documents and the rules.
 # Run: python -m insurance_gpt.retrieval.evaluate
+#
+# Shorthands below: U = ergo-zahntarife-uebersicht-2024-08:uebersicht, B = ergo-zahn-broschuere-2022-07:broschuere
+# (expanded by the loader).
 questions:
-  - id: implants-de
-    question: "Zahlt der Tarif ZEK für Implantate?"
-    query: "Implantate Leistung Ausschluss Tarif ZEK"
-    expected: [ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04]
-  - id: implants-en
-    question: "Does my ZEK dental insurance pay for implants?"
-    query: "Implantate Kostenübernahme Zahnersatz"
-    expected: [ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04, ergo-zek-2025-04:ipid:h03]
-  - id: first-year-limit-de
-    question: "Wie viel zahlt die Versicherung im ersten Jahr maximal?"
-    query: "Leistungsbegrenzung erstes Versicherungsjahr Höchstbetrag"
-    expected: [ergo-zek-2025-04:avb:1.1#5, ergo-zek-2025-04:ipid:h05]
-  - id: first-year-limit-en
-    question: "Is there a maximum payout in the first two years?"
-    query: "Leistungsbegrenzung ersten zwei Versicherungsjahre maximale Gesamtleistung"
-    expected: [ergo-zek-2025-04:avb:1.1#5, ergo-zek-2025-04:ipid:h05]
+  - id: implants-ds90-de
+    question: "Zahlt Dental-Schutz 90 für Implantate?"
+    query: "Dental-Schutz 90 Implantate Erstattung"
+    expected: [B:t9.r2, U:t2.r2, B:t5.r2]
+  - id: implants-zez-en
+    question: "Does Zahnersatz Sofort cover implants?"
+    query: "Zahnersatz Sofort ZEZ Implantate"
+    expected: [B:t12.r2]
   - id: waiting-period-en
     question: "Is there a waiting period before I can claim?"
     query: "Wartezeit Leistungsanspruch"
-    expected: [ergo-ds100-brochure-2026-02:brochure:h08]
-  - id: cancel-de
-    question: "Wann kann ich den Vertrag kündigen?"
-    query: "Kündigung Mindestvertragsdauer Vertrag"
-    expected: [ergo-zek-2025-04:avb:5.1, ergo-zek-2025-04:ipid:h10]
-  - id: cancel-monthly-en
-    question: "Can I cancel the insurance every month?"
-    query: "monatliche Kündigung Kalendermonat"
-    expected: [ergo-zek-2025-04:avb:5.1, ergo-zek-2025-04:ipid:h10, ergo-ds100-brochure-2026-02:brochure:h08]
-  - id: treatment-started-en
-    question: "My dentist already started the treatment before I signed up. Is it covered?"
-    query: "Behandlung vor Versicherungsbeginn begonnen erweiterter Versicherungsschutz"
-    expected: [ergo-zek-2025-04:avb:1.1#2, ergo-zek-2025-04:avb:1.2, ergo-zek-2025-04:ipid:h04, ergo-zek-2025-04:ipid:h09]
+    expected: [B:t10.r4, B:t7.r6, B:t13.r15, B:h16, U:t2.r11, U:t1.r10, B:t5.r11, B:t3.r10]
+  - id: premium-ds100-35-de
+    question: "Was kostet Dental-Schutz 100 im Monat für einen 35-Jährigen?"
+    query: "Monatsbeitrag Dental-Schutz 100 Eintrittsalter 35"
+    expected: [B:t11.r4]
+  - id: premium-dvb-child-en
+    question: "How much is Dental-Vorsorge per month for my 8-year-old?"
+    query: "Monatsbeitrag Dental-Vorsorge DVB Eintrittsalter Kind 8 Jahre"
+    expected: [B:t8.r1]
+  - id: cleaning-de
+    question: "Wird die professionelle Zahnreinigung bezahlt?"
+    query: "professionelle Zahnreinigung Prophylaxe Erstattung"
+    expected: [U:t1.r5, B:t3.r5, B:h26, B:t1.r1, B:t6.r6]
+  - id: braces-children-de
+    question: "Zahlt die Versicherung eine Zahnspange für mein Kind?"
+    query: "Kieferorthopädie Kinder Jugendliche Zahnspange Erstattung"
+    expected: [U:t1.r6, B:t3.r6, B:h17, B:t13.r4, B:t6.r4, B:t2.r1]
+  - id: first-year-limit-en
+    question: "How much can I get reimbursed in the first year with Dental-Schutz 100?"
+    query: "Summenbegrenzung erstes Versicherungsjahr Dental-Schutz 100"
+    expected: [U:t2.r10, B:t5.r10, B:t9.r9]
+  - id: whitening-en
+    question: "Is teeth whitening covered?"
+    query: "Bleaching Zahnaufhellung Erstattung"
+    expected: [U:t1.r8, B:t3.r8, B:t9.r11, B:t7.r1, B:t12.r10, B:t13.r11]
   - id: abroad-de
-    question: "Bin ich auch im Urlaub in Spanien versichert?"
-    query: "Auslandsaufenthalt Europäische Union Versicherungsschutz"
-    expected: [ergo-zek-2025-04:avb:1.3, ergo-zek-2025-04:ipid:h06]
-  - id: documents-en
-    question: "Which documents do I need to send in for a reimbursement?"
-    query: "Belege einreichen Rechnung Erstattung"
-    expected: [ergo-zek-2025-04:avb:2.1, ergo-zek-2025-04:ipid:h07]
-  - id: withdrawal-en
-    question: "How long do I have to withdraw from the contract?"
-    query: "Widerruf Frist Vertragserklärung"
-    expected: [ergo-zek-2025-04:kib:8#1]
-  - id: first-premium-de
-    question: "Wann ist der erste Beitrag fällig?"
-    query: "Erstbeitrag fällig Zahlung"
-    expected: [ergo-zek-2025-04:avb:4.1, ergo-zek-2025-04:kib:5, ergo-zek-2025-04:ipid:h08]
+    question: "Bin ich im Urlaub in Spanien versichert?"
+    query: "Geltungsbereich Ausland Europäische Union Aufenthalt"
+    expected: [B:t10.r3, B:t7.r5, B:t13.r14]
+  - id: treatment-started-en
+    question: "My dentist already started the treatment. Can I still get insured for it?"
+    query: "bereits begonnene angeratene Behandlung Sofortschutz versichert"
+    expected: [B:h15, B:h16, B:h13, B:t13.r15]
   - id: inlays-de
-    question: "Werden Inlays bezahlt?"
-    query: "Inlays Onlays Erstattung"
-    expected: [ergo-ds100-brochure-2026-02:brochure:h05]
-  - id: cleaning-en
-    question: "Is professional teeth cleaning covered?"
-    query: "professionelle Zahnreinigung Prophylaxe"
-    expected: [ergo-zek-2025-04:ipid:h04, ergo-ds100-brochure-2026-02:brochure:h08]
-  - id: cost-example-de
-    question: "Was würde ich bei einer Teleskopversorgung selbst zahlen?"
-    query: "Teleskopversorgung Kostenbeispiel Eigenanteil"
-    expected: [ergo-ds100-brochure-2026-02:brochure:h09]
-  - id: complaint-en
-    question: "Where can I complain if I disagree with a decision?"
-    query: "Beschwerde Ombudsmann Streitbeilegung"
-    expected: [ergo-zek-2025-04:avb:7]
+    question: "Werden Inlays erstattet?"
+    query: "Inlays Erstattung"
+    expected: [U:t2.r3, B:t5.r3, B:t9.r1, B:t13.r3]
+  - id: anaesthesia-en
+    question: "Does the insurance pay for general anaesthesia at the dentist?"
+    query: "Narkose Schmerzausschaltung Erstattung"
+    expected: [U:t2.r7, B:t5.r7, B:t9.r10, B:t13.r10]
+  - id: start-discount-de
+    question: "Gibt es am Anfang einen günstigeren Beitrag?"
+    query: "Startbeitrag erste Monate Hälfte Beitrag"
+    expected: [U:t2.r11, B:t5.r11, U:h02, U:h03, U:h05, B:t11.r4, B:t11.r2, B:t11.r1, B:h14, B:h18]
+  - id: health-questions-en
+    question: "Do I have to answer health questions to sign up?"
+    query: "Gesundheitsfragen Gesundheitszustand Vertragsabschluss"
+    expected: [B:t9.r12, B:t7.r2, B:t12.r11, B:t13.r12, B:h16, U:t2.r11, U:t1.r10, B:t5.r11, B:t3.r10]
+  - id: zef-de
+    question: "Was ist der Dental-Zuschuss (Tarif ZEF)?"
+    query: "Dental-Zuschuss Tarif ZEF Festzuschuss verdoppeln"
+    expected: [U:h06, B:h24]
   - id: out-of-scope-car
     question: "Does my car insurance cover hail damage?"
     query: "Kfz-Versicherung Hagelschaden"
