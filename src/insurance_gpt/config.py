@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "INFO"
+    # Public hostnames the server is reached under (tunnel or VM domain), comma-separated, e.g.
+    # "my-demo.ngrok-free.app". Requests with any other Host header are rejected (DNS rebinding protection).
+    public_hosts: str = ""
 
     knowledge_dir: Path = PROJECT_ROOT / "knowledge"
     data_dir: Path = PROJECT_ROOT / ".data"
@@ -26,6 +29,10 @@ class Settings(BaseSettings):
     search_top_k: int = 5
     # Below this cosine similarity (best dense match) a search returns "no_relevant_passage".
     min_relevance: float = 0.81
+
+    @property
+    def public_host_list(self) -> list[str]:
+        return [h.strip() for h in self.public_hosts.split(",") if h.strip()]
 
     @property
     def sources_file(self) -> Path:

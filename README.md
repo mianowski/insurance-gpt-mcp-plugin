@@ -55,9 +55,27 @@ structure), run `build`, review with `show`, commit the PDF and the chunk file t
 
 - **MCP Inspector:** `npx @modelcontextprotocol/inspector`, transport *Streamable HTTP*,
   URL `http://127.0.0.1:8000/mcp`.
-- **ChatGPT:** expose the server over HTTPS (e.g. `ngrok http 8000 --url <your-static-domain>`), then
-  chatgpt.com/plugins → **+** → *Add custom MCP server* → URL `https://<domain>/mcp`, no auth →
-  *Create as a plugin*; install it from your personal plugins and use it in a **Work** chat with `@`.
+- **ChatGPT:** see [Connect to ChatGPT](#connect-to-chatgpt).
+
+## Connect to ChatGPT
+
+ChatGPT needs a public HTTPS URL. For development, tunnel the local server with ngrok (free account,
+one free static domain, so the URL stays the same between sessions):
+
+1. Install ngrok (`winget install ngrok.ngrok`), sign up at ngrok.com, then
+   `ngrok config add-authtoken <token>`. Claim your free static domain in the ngrok dashboard (Domains).
+2. Start the server and allow that domain as Host (other hosts are rejected):
+   ```powershell
+   $env:IGPT_PUBLIC_HOSTS = "<your-domain>.ngrok-free.app"
+   python -m uv run insurance-gpt
+   ```
+3. In a second terminal: `ngrok http 8000 --url <your-domain>.ngrok-free.app`
+4. In ChatGPT: chatgpt.com/plugins → **+** → *Add custom MCP server* → name `ERGO Dental (demo)`,
+   URL `https://<your-domain>.ngrok-free.app/mcp`, authentication *None* → accept the warning →
+   *Create as a plugin*. Install it from your personal plugins (chatgpt.com/plugins?view=personal).
+5. Open a **Work** chat, type `@`, pick the plugin and ask, e.g. *"Zahlt der Tarif ZEK für Implantate?"*
+
+The server has no authentication yet: only keep the tunnel running while you test.
 
 ## Docker
 

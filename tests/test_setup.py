@@ -18,3 +18,14 @@ def test_server_advertises_read_only_tools():
     assert all(t.annotations.read_only_hint for t in tools.values())
     assert tools["search_conditions"].input_schema["required"] == ["query"]
     assert "outputSchema" in tools["search_conditions"].model_dump(by_alias=True, exclude_none=True)
+
+
+def test_transport_security_accepts_only_local_and_public_hosts():
+    from insurance_gpt.config import Settings
+    from insurance_gpt.server import transport_security
+
+    sec = transport_security(Settings(public_hosts="demo.ngrok-free.app, other.example.org"))
+    assert sec.enable_dns_rebinding_protection
+    assert {"demo.ngrok-free.app", "other.example.org", "localhost:*"} <= set(sec.allowed_hosts)
+    assert "https://demo.ngrok-free.app" in sec.allowed_origins
+    assert "evil.example.com" not in sec.allowed_hosts
