@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked --all-groups
+      - run: tar -czf .venv.tar.gz .venv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-environment
+          path: .venv.tar.gz
+          if-no-files-found: error
+
+  lint:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-environment
+      - run: tar -xzf .venv.tar.gz
+      - run: uv run --no-sync ruff check .
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-environment
+      - run: tar -xzf .venv.tar.gz
+      - run: uv run --no-sync pytest

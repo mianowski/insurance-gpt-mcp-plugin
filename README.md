@@ -32,6 +32,9 @@ uv run pytest                # tests
 uv run ruff check . && uv run ruff format .
 ```
 
+GitHub Actions runs Ruff and pytest on every push and pull request. Retrieval tests that require the
+large embedding model are skipped when the model is not available in the CI environment.
+
 
 ### Knowledge base
 
