@@ -9,8 +9,8 @@ Legend: ✅ done · 🟡 partly done · ⬜ not started · ➖ struck out in the
 
 | Status | Count | IDs |
 | --- | --- | --- |
-| ✅ Done | 6 | 1.4, 2.2, 3.1, 3.2, 3.3, 4.6 (+ 1.1, 1.3 done before being struck out) |
-| 🟡 Partly done | 10 | 1.2, 2.1, 4.1, 4.5, 5.1, 5.2, 6.1, 6.2, 6.3, 6.5 |
+| ✅ Done | 7 | 1.4, 2.2, 3.1, 3.2, 3.3, 4.6, 5.2 (+ 1.1, 1.3 done before being struck out) |
+| 🟡 Partly done | 9 | 1.2, 2.1, 4.1, 4.5, 5.1, 6.1, 6.2, 6.3, 6.5 |
 | ⬜ Not started | 8 | 3.4, 3.5, 3.6, 4.2, 4.3, 4.4, 4.7, 5.3 |
 | ➖ Struck out | 4 | 1.1, 1.3, 2.3, 6.4 |
 
@@ -66,7 +66,7 @@ tariff rules, which is struck out in the plan.
 | ID | Task | Type | Deliverable | Status | Where we are |
 | --- | --- | --- | --- | --- | --- |
 | 5.1 | Configure hosting, HTTPS, endpoint access, and secrets handling | C | Approved, reachable test deployment | 🟡 | HTTPS via an ngrok tunnel from the host's machine. A hostname allowlist protects against DNS rebinding. Setup in `docs/CHATGPT_PLUGIN_SETUP.md`. **Missing:** a stable deployment (static domain or EU VM), approval, and secrets handling (no secrets used yet). |
-| 5.2 | Register the custom app and configure UI resources/security policies | C | Tools and embedded UI work inside ChatGPT | 🟡 | The tools work inside ChatGPT as a custom plugin. **Citation card built:** `show_citation` checks the quote against the source on the server and renders a card with the quote highlighted, the citation and a PDF link. The UI resource declares a CSP that allows no outside domains. Tested in a headless browser with a stand-in host. **Missing:** testing the card inside ChatGPT. |
+| 5.2 | Register the custom app and configure UI resources/security policies | C | Tools and embedded UI work inside ChatGPT | ✅ | The tools work inside ChatGPT as a custom plugin. **Citation card built:** `show_citation` checks the quote against the source on the server and renders a card with the quote highlighted, the citation and a PDF link. The UI resource declares a CSP that allows no outside domains. Works in ChatGPT (2026-11-16): ChatGPT searched, then called `show_citation` with the right passage; the quote was verified on the first try and the card with the PDF button appeared. |
 | 5.3 | Configure access restrictions, session expiry, and redacted logging | C | Test access controlled; unnecessary personal data not retained | ⬜ | Not started. There's no authentication: anyone with the URL can call the server. The logs keep testers' questions without redaction. Mitigation for now: run the tunnel only while testing, and use no real personal data. |
 
 ### 6. Validation and delivery
@@ -84,7 +84,7 @@ tariff rules, which is struck out in the plan.
 1. **Decide whether the tariff path is in scope for the demo** (2.3 is struck out, but 3.4–3.6, 4.2, 4.3 and 4.7
    depend on it). If not, mark those rows out of scope too.
 2. **Confirm the source pack (2.1):** are the brochure premiums (as of 01.07.2022) acceptable for the demo?
-3. ~~Citation card + server-side quote check (5.2)~~ built; next: try it in ChatGPT.
+3. ~~Citation card + server-side quote check (5.2)~~ done, works in ChatGPT.
 4. **Packaged skill and conversation script (4.1)**, then **demo script (6.5)**.
 5. **Stable hosting with access control and redacted logs (5.1, 5.3)** before sharing the URL beyond the team.
 6. **Grow the scenario set (1.2, 6.2, 6.3):** multi-turn, prompt injection, sensitive data; add an

@@ -15,7 +15,7 @@ PoC / demo only: it uses **public** documents. Architecture and decisions are in
 | Ingestion: PDFs → sections and tariff-table rows with page refs (WBS 2.2) | done, 152 chunks in `knowledge/chunks/` |
 | Retrieval: hybrid search (e5-large + BM25, Qdrant), eval set (WBS 3.3) | done, hit@5 1.00, MRR 0.93 |
 | MCP server (Streamable HTTP, `/mcp`): `list_documents`, `search_conditions`, `get_section` | done |
-| Verified citation card: `show_citation` + widget (WBS 5.2) | done, not yet tried in ChatGPT |
+| Verified citation card: `show_citation` + widget (WBS 5.2) | done, works in ChatGPT |
 | ChatGPT connection (custom plugin via ngrok) | done, see the setup guide |
 | Packaged skill + conversation script (WBS 4.1), demo script (WBS 6.5) | next |
 

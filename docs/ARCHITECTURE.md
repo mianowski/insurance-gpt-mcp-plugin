@@ -170,8 +170,8 @@ document + edition, and an "Open PDF, p. N" button (`<url>#page=N`). It renders 
 data, as text nodes (no HTML injection), in light and dark theme, labels in German or English.
 Bridge: `ui/initialize` → `ui/notifications/initialized` → `ui/notifications/tool-result`; height via
 `ui/notifications/size-changed`; links via `ui/open-link`; `window.openai` (`toolOutput`, `openExternal`)
-as a feature-detected fallback. Checked in a headless browser against a stand-in host; not yet in
-ChatGPT.
+as a feature-detected fallback. Checked in a headless browser against a stand-in host and in ChatGPT (2026-11-16: search_conditions →
+show_citation with the right passage, verified on the first try; card and PDF button rendered).
 
 > Per OpenAI's plugin UI docs: tool links to the widget with `_meta.ui.resourceUri` (ChatGPT also accepts
 > the alias `_meta["openai/outputTemplate"]`); resource MIME type `text/html;profile=mcp-app`; resource
