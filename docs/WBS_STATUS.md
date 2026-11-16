@@ -57,7 +57,7 @@ tariff rules, which is struck out in the plan.
 | 4.2 | Develop embedded tariff configurator | F | Selectable coverage groups, comparison, price, and disclosures | ⬜ | Not started; needs 3.4–3.6. |
 | 4.3 | Implement chat/UI state synchronization | F | Chat and configurator use the same current selection | ⬜ | Not started; needs 4.2. |
 | 4.4 | Implement adviser link or simulated handoff | F/C | Button works without creating a real lead | ⬜ | Not started. Today the answer only tells the user in text to contact ERGO customer service or an adviser. |
-| 4.5 | Implement loading, missing-data, invalid-input, and service-error states | F | Recoverable errors with understandable messages back to the LLM | 🟡 | Unknown document or passage ids return an error ChatGPT can recover from. Nothing relevant found returns `no_relevant_passage` with guidance. The model is loaded before the server accepts requests. **Missing:** handling of internal errors (e.g. index failure) and UI loading states (there's no widget yet). |
+| 4.5 | Implement loading, missing-data, invalid-input, and service-error states | F | Recoverable errors with understandable messages back to the LLM | 🟡 | Unknown document or passage ids return an error ChatGPT can recover from. Nothing relevant found returns `no_relevant_passage` with guidance. The model is loaded before the server accepts requests. **Missing:** handling of internal errors (e.g. index failure). The citation card shows a loading text until its data arrives; a quote that can't be verified returns an error with the closest source text, so ChatGPT can correct it. |
 | 4.6 | Handling of out-of-scope input requests | F | LLM returns with out-of-scope info | ✅ | Unrelated questions (weather, claim status) are rejected by the relevance threshold. Other insurance products (car, household) are declined by ChatGPT, following the rules and the `scope_note`. Covered by the eval and checked in the ChatGPT test. |
 | 4.7 | Administration panel within MCP for an admin user to adjust tariffs or specific information | F | Admin panel for marketing user | ⬜ | Not started. Content changes today: edit `knowledge/sources.yaml` or `tuning.yaml`, rebuild, restart. That's developer-only. |
 
@@ -66,7 +66,7 @@ tariff rules, which is struck out in the plan.
 | ID | Task | Type | Deliverable | Status | Where we are |
 | --- | --- | --- | --- | --- | --- |
 | 5.1 | Configure hosting, HTTPS, endpoint access, and secrets handling | C | Approved, reachable test deployment | 🟡 | HTTPS via an ngrok tunnel from the host's machine. A hostname allowlist protects against DNS rebinding. Setup in `docs/CHATGPT_PLUGIN_SETUP.md`. **Missing:** a stable deployment (static domain or EU VM), approval, and secrets handling (no secrets used yet). |
-| 5.2 | Register the custom app and configure UI resources/security policies | C | Tools and embedded UI work inside ChatGPT | 🟡 | The tools work inside ChatGPT as a custom plugin. **Missing:** embedded UI (the planned citation card widget and server-side citation check) and the UI security policy. |
+| 5.2 | Register the custom app and configure UI resources/security policies | C | Tools and embedded UI work inside ChatGPT | 🟡 | The tools work inside ChatGPT as a custom plugin. **Citation card built:** `show_citation` checks the quote against the source on the server and renders a card with the quote highlighted, the citation and a PDF link. The UI resource declares a CSP that allows no outside domains. Tested in a headless browser with a stand-in host. **Missing:** testing the card inside ChatGPT. |
 | 5.3 | Configure access restrictions, session expiry, and redacted logging | C | Test access controlled; unnecessary personal data not retained | ⬜ | Not started. There's no authentication: anyone with the URL can call the server. The logs keep testers' questions without redaction. Mitigation for now: run the tunnel only while testing, and use no real personal data. |
 
 ### 6. Validation and delivery
@@ -84,7 +84,7 @@ tariff rules, which is struck out in the plan.
 1. **Decide whether the tariff path is in scope for the demo** (2.3 is struck out, but 3.4–3.6, 4.2, 4.3 and 4.7
    depend on it). If not, mark those rows out of scope too.
 2. **Confirm the source pack (2.1):** are the brochure premiums (as of 01.07.2022) acceptable for the demo?
-3. **Citation card + server-side quote check (5.2):** the visible "proof" the demo is about.
+3. ~~Citation card + server-side quote check (5.2)~~ built; next: try it in ChatGPT.
 4. **Packaged skill and conversation script (4.1)**, then **demo script (6.5)**.
 5. **Stable hosting with access control and redacted logs (5.1, 5.3)** before sharing the URL beyond the team.
 6. **Grow the scenario set (1.2, 6.2, 6.3):** multi-turn, prompt injection, sensitive data; add an

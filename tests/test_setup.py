@@ -14,7 +14,7 @@ def test_manifest_is_valid():
 
 def test_server_advertises_read_only_tools():
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
-    assert set(tools) == {"list_documents", "search_conditions", "get_section"}
+    assert set(tools) == {"list_documents", "search_conditions", "get_section", "show_citation"}
     assert all(t.annotations.read_only_hint for t in tools.values())
     assert tools["search_conditions"].input_schema["required"] == ["query"]
     assert "outputSchema" in tools["search_conditions"].model_dump(by_alias=True, exclude_none=True)

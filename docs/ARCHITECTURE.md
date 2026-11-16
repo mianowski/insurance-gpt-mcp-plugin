@@ -148,7 +148,7 @@ plus a short text `content`.
 | `list_documents` | – | covered documents, products, editions, `scope_note` | Lets the model know the scope; basis for out-of-scope answers (4.6). |
 | `search_conditions` | `query` (German, required), `question?`, `doc_id?`, `top_k` | `status`, passages: `chunk_id`, `citation` (e.g. "…Tarif ZEK, Ziffer 1.2, S. 6"), document, part, section title, clause, pages, PDF deep link (`#page=N`), verbatim text, relevance; `guidance` | Main RAG tool. |
 | `get_section` | `chunk_id` | all passages of that section | Lets the model read the whole section when a hit is a fragment (exclusions often sit in the next clause). |
-| `show_citation` | `chunk_id`, `quote` | verified quote + metadata, **renders citation widget** | The "proof". Server checks `quote` is a (whitespace/hyphenation-normalised) substring of the chunk; if not, returns an error telling the model to quote exactly. |
+| `show_citation` | `chunk_id`, `quote` (German, verbatim; `…` for omissions), `translation?`, `language` (`de`/`en`, card labels) | the **server's copy** of the quote, highlighted in its context, citation, document + edition, pages, PDF link; **renders the citation card** | The "proof" (`tools/citation.py`, `retrieval/verify.py`). Matching tolerates only cosmetic differences: whitespace/line breaks, typographic quotes and dashes, case, list bullets, edge punctuation, `…` between pieces in order. A changed or missing word fails. A quote found in another passage than the one named is cited where it really is (`corrected_chunk_id`). Not found or shorter than `citation.min_quote_chars` → ToolError with the closest source sentence (or the passage text), so the model retries instead of the user seeing a failed card. |
 
 Errors are returned as structured, recoverable messages for the model (4.5): `no_relevant_passage`,
 `unknown_tariff`, `quote_not_found`, `service_unavailable`.
@@ -162,10 +162,16 @@ offer the adviser handoff for anything personal (claims, own contract).
 
 ### 4.4 UI widget (citation card) — WBS 5.2
 
-A small static HTML/JS bundle served as an MCP Apps UI resource (`ui://widget/citation.html`), linked from
-`show_citation`. It shows: document title + edition, `§` path, page, the quoted text highlighted within
-its surrounding paragraph, and an "Open PDF at page N" link (`<url>#page=N`). It renders only
-server-provided data, so the user sees the real source text.
+One self-contained HTML file (`src/insurance_gpt/widgets/citation.html`, no external scripts or styles)
+served as the MCP Apps UI resource `ui://widget/citation-v1.html`, linked from `show_citation` only. It
+shows a "Quote verified" badge, the section, the quote highlighted in its context (a table row is shown
+whole: all tariffs, the quoted one highlighted), ChatGPT's translation labelled as such, the citation,
+document + edition, and an "Open PDF, p. N" button (`<url>#page=N`). It renders only server-provided
+data, as text nodes (no HTML injection), in light and dark theme, labels in German or English.
+Bridge: `ui/initialize` → `ui/notifications/initialized` → `ui/notifications/tool-result`; height via
+`ui/notifications/size-changed`; links via `ui/open-link`; `window.openai` (`toolOutput`, `openExternal`)
+as a feature-detected fallback. Checked in a headless browser against a stand-in host; not yet in
+ChatGPT.
 
 > Per OpenAI's plugin UI docs: tool links to the widget with `_meta.ui.resourceUri` (ChatGPT also accepts
 > the alias `_meta["openai/outputTemplate"]`); resource MIME type `text/html;profile=mcp-app`; resource
@@ -213,10 +219,11 @@ src/insurance_gpt/
   server.py            # MCPServer app, tool + widget registration, /mcp endpoint
   config.py            # runtime settings (host, port, paths), env vars
   tuning.py            # loads tuning.yaml (repo root): every quality knob and every text ChatGPT reads
-  tools/knowledge.py   # list_documents, search_conditions, get_section, show_citation
+  tools/knowledge.py   # list_documents, search_conditions, get_section
+  tools/citation.py    # show_citation (verified quote → citation card)
   retrieval/           # embedder interface, qdrant store, hybrid search, citation verifier
   ingest/              # fetch, parse, chunk, build (CLI)
-  widgets/citation/    # widget HTML/JS
+  widgets/citation.html  # citation card (MCP Apps UI resource)
 plugin/
   skills/              # ChatGPT plugin skill(s): conversation guidance, citation rules (WBS 4.1)
 knowledge/

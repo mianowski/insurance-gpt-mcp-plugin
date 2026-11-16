@@ -37,6 +37,11 @@ retrieval:
   # in-scope and highest unrelated score (currently 0.829 / 0.803).
   min_relevance: 0.81
 
+# --- Verified citation card (show_citation) ----------------------------------------------------------------
+citation:
+  min_quote_chars: 12 # shorter quotes ("Ja.") prove nothing on their own; ask for the whole sentence
+  context_chars: 160 # source text shown around the quote on the card (extended to the sentence/line)
+
 # --- What ChatGPT is told -----------------------------------------------------------------------------------
 # Placeholders: {disclaimer} and {rules} are filled in everywhere; {products} in scope_note at runtime.
 answer:
@@ -57,6 +62,9 @@ answer:
     - >-
       Cite the passage whose text actually states the rule (its `citation`: part, Ziffer, page), and quote
       the decisive sentence verbatim in German, followed by a translation if the question is not in German.
+      Then call show_citation once with that passage's chunk_id and the exact German sentence, so the user
+      sees the verified source card; if it reports that the quote was not found, use the source text it
+      returns and call it again.
     - >-
       Questions about other insurance types, other insurers, or the user's own contract, claim or policy
       number are out of scope: say so briefly, point to ERGO customer service or an adviser, and do not
@@ -84,6 +92,14 @@ answer:
     search_query: >-
       Search query in GERMAN, the language of the documents. Translate the user's question and use the
       insurance terms the conditions would use, e.g. 'Implantate Leistung Ausschluss'.
+    show_citation: >-
+      Show the user a source card proving the answer: the server checks that the quote appears verbatim in
+      the passage and displays it highlighted in its context, with document, section, page and a link to
+      the PDF page. Call it once per answer, after search_conditions or get_section, with the decisive
+      sentence. If the quote is not found, the error contains the closest source text: quote that instead.
+    show_citation_quote: >-
+      The decisive sentence copied verbatim from the passage text (German). Use "…" for omitted words. Do not
+      paraphrase, translate or correct it.
     get_section: >-
       Return the complete section a passage belongs to (all its clauses), e.g. to read the exclusions or
       limits that follow a benefit clause.

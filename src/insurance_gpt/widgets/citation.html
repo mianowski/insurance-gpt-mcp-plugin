@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Citation</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1d1d1f;
+    --muted: #6b6b70;
+    --border: #e3e3e6;
+    --quote-bg: #f6f6f8;
+    --mark: #fff1a8;
+    --mark-fg: #1d1d1f;
+    --ok: #137333;
+    --ok-bg: #e6f4ea;
+    --accent: #8e0038; /* ERGO-like red, demo only */
+  }
+  :root[data-theme="dark"] {
+    --bg: #212121;
+    --fg: #ececec;
+    --muted: #a0a0a6;
+    --border: #3a3a3d;
+    --quote-bg: #2a2a2d;
+    --mark: #6b5a00;
+    --mark-fg: #fff8d6;
+    --ok: #81c995;
+    --ok-bg: #1e3a27;
+    --accent: #ff7aa8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .card { padding: 14px 16px; display: grid; gap: 10px; }
+  .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px;
+    background: var(--ok-bg); color: var(--ok); font-weight: 600; font-size: 12px;
+  }
+  .section { font-weight: 600; }
+  blockquote {
+    margin: 0; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--quote-bg);
+    border-radius: 0 6px 6px 0; white-space: pre-line; overflow-wrap: anywhere;
+  }
+  mark { background: var(--mark); color: var(--mark-fg); padding: 0 1px; border-radius: 2px; }
+  .context { color: var(--muted); }
+  .translation { color: var(--muted); font-style: italic; }
+  .translation b { font-style: normal; font-weight: 600; }
+  .meta { color: var(--muted); font-size: 12px; display: grid; gap: 2px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: transparent; color: var(--fg);
+  }
+  button:hover { border-color: var(--accent); }
+  .note { color: var(--muted); font-size: 12px; }
+  .empty { padding: 14px 16px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="root" class="empty">…</div>
+<script>
+(() => {
+  "use strict";
+
+  const LABELS = {
+    de: {
+      verified: "Zitat geprüft",
+      verifiedTitle: "Der markierte Text steht wörtlich in diesem Dokument.",
+      translation: "Übersetzung (ChatGPT):",
+      open: "PDF öffnen, S. ",
+      source: "Quelle",
+      corrected: "Fundstelle vom Server korrigiert.",
+      waiting: "Quelle wird geladen …",
+      official: "Öffentliches ERGO-Dokument",
+    },
+    en: {
+      verified: "Quote verified",
+      verifiedTitle: "The highlighted text appears verbatim in this document.",
+      translation: "Translation (ChatGPT):",
+      open: "Open PDF, p. ",
+      source: "Source",
+      corrected: "Location corrected by the server.",
+      waiting: "Loading source …",
+      official: "Public ERGO document",
+    },
+  };
+
+  const root = document.getElementById("root");
+  let rendered = null;
+
+  // --- MCP Apps bridge (JSON-RPC over postMessage) ---------------------------------------------------
+  let nextId = 1;
+  const pending = new Map();
+
+  function request(method, params) {
+    const id = nextId++;
+    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      setTimeout(() => {
+        if (pending.delete(id)) reject(new Error("timeout: " + method));
+      }, 5000);
+    });
+  }
+
+  function notify(method, params) {
+    window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent) return;
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+    if (msg.id !== undefined && pending.has(msg.id)) {
+      const { resolve, reject } = pending.get(msg.id);
+      pending.delete(msg.id);
+      msg.error ? reject(msg.error) : resolve(msg.result);
+      return;
+    }
+    if (msg.method === "ui/notifications/tool-result") render(msg.params && msg.params.structuredContent);
+    if (msg.method === "ui/notifications/host-context-changed") applyTheme(msg.params && msg.params.theme);
+  });
+
+  async function connect() {
+    try {
+      const result = await request("ui/initialize", {
+        protocolVersion: "2026-01-26",
+        appInfo: { name: "ergo-citation-card", version: "1" },
+        appCapabilities: {},
+      });
+      applyTheme(result && result.hostContext && result.hostContext.theme);
+      notify("ui/notifications/initialized", {});
+    } catch (_) {
+      /* host without the MCP Apps bridge: rely on window.openai below */
+    }
+  }
+
+  // --- ChatGPT compatibility (window.openai) -----------------------------------------------------------
+  function fromOpenAI() {
+    const openai = window.openai;
+    if (!openai) return;
+    applyTheme(openai.theme);
+    if (openai.toolOutput) render(openai.toolOutput);
+  }
+  window.addEventListener("openai:set_globals", (event) => {
+    const globals = (event.detail && event.detail.globals) || {};
+    if (globals.theme) applyTheme(globals.theme);
+    if (globals.toolOutput) render(globals.toolOutput);
+  });
+
+  function openLink(url) {
+    const openai = window.openai;
+    if (openai && typeof openai.openExternal === "function") {
+      openai.openExternal({ href: url });
+      return;
+    }
+    request("ui/open-link", { url }).catch(() => window.open(url, "_blank", "noopener"));
+  }
+
+  // --- Rendering (data is untrusted: text nodes only) ----------------------------------------------------
+  function el(tag, attrs, children) {
+    const node = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs || {})) {
+      if (key === "className") node.className = value;
+      else node.setAttribute(key, value);
+    }
+    for (const child of [].concat(children || [])) {
+      if (child == null) continue;
+      node.append(typeof child === "string" ? document.createTextNode(child) : child);
+    }
+    return node;
+  }
+
+  function applyTheme(theme) {
+    if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
+  }
+
+  function render(data) {
+    if (!data || !data.verified || !Array.isArray(data.context)) return;
+    const key = JSON.stringify(data);
+    if (key === rendered) return;
+    rendered = key;
+    const t = LABELS[data.language] || LABELS.de;
+    document.documentElement.lang = data.language === "en" ? "en" : "de";
+    const firstPage = (String(data.pages || "").match(/\d+/) || [""])[0]; // "S. 9–10" -> "9"
+
+    const quote = el(
+      "blockquote",
+      {},
+      data.context.map((s) => (s.highlight ? el("mark", {}, String(s.text)) : el("span", { className: "context" }, String(s.text)))),
+    );
+    const card = el("div", { className: "card" }, [
+      el("div", { className: "top" }, [
+        el("span", { className: "badge", title: t.verifiedTitle }, "✓ " + t.verified),
+        el("span", { className: "section" }, String(data.section_title || "")),
+      ]),
+      quote,
+      data.translation
+        ? el("div", { className: "translation" }, [el("b", {}, t.translation + " "), String(data.translation)])
+        : null,
+      el("div", { className: "meta" }, [
+        el("div", {}, t.source + ": " + String(data.citation || "")),
+        el("div", {}, String(data.document || "") + (data.edition ? " · " + String(data.edition) : "") + (data.official_source ? " · " + t.official : "")),
+      ]),
+      el("div", { className: "actions" }, [el("button", { type: "button", id: "open" }, t.open + firstPage)]),
+      data.corrected_chunk_id ? el("div", { className: "note" }, t.corrected) : null,
+    ]);
+    root.className = "";
+    root.replaceChildren(card);
+    document.getElementById("open").addEventListener("click", () => {
+      if (/^https:\/\//.test(String(data.url))) openLink(String(data.url));
+    });
+    reportSize();
+  }
+
+  function reportSize() {
+    notify("ui/notifications/size-changed", {
+      width: document.documentElement.scrollWidth,
+      height: document.documentElement.scrollHeight,
+    });
+  }
+  new ResizeObserver(reportSize).observe(document.body);
+
+  root.textContent = LABELS.de.waiting;
+  connect();
+  fromOpenAI();
+})();
+</script>
+</body>
+</html>

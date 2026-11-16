@@ -130,7 +130,9 @@ Example questions (German or English; the answer comes back in the language of t
 | *Wird die professionelle Zahnreinigung bezahlt?* | DVB once a year, DVB + DVE without limit (overview p. 2) |
 | *How do I cancel my household insurance?* | Declined: not covered by these documents |
 
-A good answer quotes the German source sentence and names document, section and page. Every answer ends
+A good answer quotes the German source sentence and names document, section and page, and shows a
+**citation card** below it: "Quote verified", the quote highlighted in the source text, and an *Open PDF*
+button for that page. If no card appears, refresh the plugin (see *After changes on the server*). Every answer ends
 with: *"Informational only; the insurance contract and its full conditions are decisive."*
 
 ---

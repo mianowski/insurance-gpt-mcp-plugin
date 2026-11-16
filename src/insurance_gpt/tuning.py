@@ -39,10 +39,17 @@ class Retrieval(_Strict):
     min_relevance: float
 
 
+class Citation(_Strict):
+    min_quote_chars: int
+    context_chars: int
+
+
 class ToolTexts(_Strict):
     list_documents: str
     search_conditions: str
     search_query: str
+    show_citation: str
+    show_citation_quote: str
     get_section: str
 
 
@@ -75,6 +82,7 @@ class Evaluation(_Strict):
 class Tuning(_Strict):
     chunking: Chunking
     retrieval: Retrieval
+    citation: Citation
     answer: Answer
     evaluation: Evaluation
     source: Path | None = None  # the file it was loaded from (not a knob)
