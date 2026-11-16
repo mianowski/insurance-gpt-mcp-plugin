@@ -22,6 +22,7 @@ class _Strict(BaseModel):
 class Chunking(_Strict):
     max_chars: int
     target_chars: int
+    overlap_sentences: int
     min_preamble_chars: int
 
 
@@ -82,6 +83,8 @@ class Tuning(_Strict):
     def _consistent(self) -> "Tuning":
         if not 0 < self.chunking.target_chars <= self.chunking.max_chars:
             raise ValueError("chunking: need 0 < target_chars <= max_chars")
+        if self.chunking.overlap_sentences < 0:
+            raise ValueError("chunking: overlap_sentences must be >= 0")
         if not 1 <= self.retrieval.top_k <= self.retrieval.max_top_k:
             raise ValueError("retrieval: need 1 <= top_k <= max_top_k")
         return self

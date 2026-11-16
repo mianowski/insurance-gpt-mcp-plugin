@@ -1,4 +1,5 @@
 import re
+from itertools import pairwise
 
 import pytest
 
@@ -46,6 +47,20 @@ def test_split_never_cuts_after_abbreviations():
     assert spans[0][0] == 0 and spans[-1][1] == len(text)
     for start, end in spans:
         assert text[start:end].strip().endswith("Keramik).")
+
+
+def test_split_overlap_repeats_sentences_of_the_previous_piece():
+    sentence = "Das gilt z. B. für Kronen bzw. Brücken (z. B. Keramik). "
+    text = sentence * 40
+    plain = _split(text, max_chars=1400, target_chars=900)
+    overlapped = _split(text, max_chars=1400, target_chars=900, overlap_sentences=2)
+    assert [end for _, end in overlapped] == [end for _, end in plain]  # same cuts, earlier starts
+    assert overlapped[0] == plain[0]
+    for (_, prev_end), (start, _), (plain_start, _) in zip(plain[:-1], overlapped[1:], plain[1:], strict=True):
+        assert plain_start - start == 2 * len(sentence) and start < prev_end
+    # Overlap never swallows the whole previous piece, so no piece duplicates another.
+    huge = _split(text, max_chars=1400, target_chars=900, overlap_sentences=100)
+    assert all(a[0] < b[0] for a, b in pairwise(huge))
 
 
 def test_numbered_terms_skip_toc_and_split_clauses():

@@ -13,6 +13,10 @@
 chunking:
   max_chars: 1400 # longer sections are split at sentence ends...
   target_chars: 900 # ...into pieces of about this size
+  # Sentences of the previous piece repeated at the start of the next one (only for split sections; whole
+  # sections and table rows never overlap). 0 = off: the current documents have no section over max_chars.
+  # Use 1-2 for long terms (AVB) where a rule may span a cut.
+  overlap_sentences: 0
   min_preamble_chars: 120 # shorter text before the first heading is the document title; dropped
 
 # --- How passages are found ---------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ section; consecutive heading lines are one heading.
 
 import re
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 from pydantic import BaseModel
 
@@ -187,8 +188,12 @@ def _with_text(line: Line, text: str) -> Line:
     return Line(line.page, line.x0, line.y0, line.x1, text, line.size, line.bold, line.column)
 
 
-def _split(text: str, max_chars: int, target_chars: int) -> list[tuple[int, int]]:
-    """(start, end) spans cutting a text longer than max_chars at sentence ends into pieces of ~target_chars."""
+def _split(text: str, max_chars: int, target_chars: int, overlap_sentences: int = 0) -> list[tuple[int, int]]:
+    """(start, end) spans cutting a text longer than max_chars at sentence ends into pieces of ~target_chars.
+
+    With overlap_sentences > 0 every piece after the first also starts with that many sentences of the
+    previous piece (never the whole previous piece), so a rule spanning a cut is complete in one chunk.
+    """
     if len(text) <= max_chars:
         return [(0, len(text))]
     cuts = [
@@ -196,13 +201,20 @@ def _split(text: str, max_chars: int, target_chars: int) -> list[tuple[int, int]
         for m in SENTENCE_END_RE.finditer(text)
         if text[: m.start() + 1].split()[-1].lstrip('("„') not in ABBREVIATIONS
     ]
+    starts = [0, *cuts]  # sentence start offsets
     spans, start = [], 0
-    for prev, cut in zip([0, *cuts], [*cuts, len(text)], strict=True):
+    for prev, cut in zip(starts, [*cuts, len(text)], strict=True):
         if cut - start > target_chars and prev > start:
             spans.append((start, prev))
             start = prev
     spans.append((start, len(text)))
-    return spans
+    if overlap_sentences <= 0:
+        return spans
+    overlapped = [spans[0]]
+    for (prev_start, _), (start, end) in pairwise(spans):
+        first = starts.index(start)
+        overlapped.append((starts[max(first - overlap_sentences, starts.index(prev_start) + 1)], end))
+    return overlapped
 
 
 def _page_at(offsets: list[tuple[int, int]], pos: int) -> int:
@@ -257,7 +269,7 @@ def chunk_part(
         if unit.section is None:
             heading_no += 1
         key = unit.clause or unit.section or f"h{heading_no:02d}"
-        pieces = _split(text, chunking.max_chars, chunking.target_chars)
+        pieces = _split(text, chunking.max_chars, chunking.target_chars, chunking.overlap_sentences)
         for i, (start, end) in enumerate(pieces, start=1):
             chunks.append(
                 Chunk(

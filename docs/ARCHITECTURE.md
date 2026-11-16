@@ -93,8 +93,15 @@ flowchart LR
      Dental-Schutz 75 (DS75): Wie Zahnersatz / …", with the table title as chapter and the table's small
      print (e.g. "Monatliche Beiträge … Stand 01.07.2022") appended. Side-by-side tariff cards are not
      mistaken for tables (a tariff name in the label column).
-   One chunk per clause, section or table row. Oversized ones are cut at real sentence ends (not after
-   "bzw.", "z. B."), each piece keeping its own page numbers. Each chunk keeps `chunk_id`
+   One chunk per clause, section or table row. Oversized ones (> `chunking.max_chars`) are cut at real
+   sentence ends (not after "bzw.", "z. B."), each piece keeping its own page numbers.
+   **No overlap by default** (`chunking.overlap_sentences: 0`): boundaries follow the document's own units,
+   so rules aren't cut the way fixed-size windows cut them; headings are embedded with every chunk, table
+   rows carry their header and notes, and `get_section` returns the whole section when one passage isn't
+   enough. Overlap would also put the same sentence in two chunks (ambiguous citations, near-duplicates in
+   `top_k`). With the current documents no section exceeds `max_chars`, so nothing is split at all. For long
+   terms (AVB) set `overlap_sentences` to 1–2: split pieces then repeat the previous piece's last sentences
+   (whole sections and table rows never overlap); compare with `evaluate`. Each chunk keeps `chunk_id`
    (e.g. `ergo-zahn-broschuere-2022-07:broschuere:t12.r2` = table 12, row 2), `part_title`, `chapter`,
    `section`, `section_title`, `clause`,
    `page_start/page_end` and the verbatim `text` that citations are verified against.
