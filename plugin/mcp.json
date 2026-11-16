@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "ergo-dental": {
+      "type": "streamable-http",
+      "url": "https://your-name.ngrok-free.app/mcp"
+    }
+  }
+}

@@ -17,7 +17,7 @@ PoC / demo only: it uses **public** documents. Architecture and decisions are in
 | MCP server (Streamable HTTP, `/mcp`): `list_documents`, `search_conditions`, `get_section` | done |
 | Verified citation card: `show_citation` + widget (WBS 5.2) | done, works in ChatGPT |
 | ChatGPT connection (custom plugin via ngrok) | done, see the setup guide |
-| Packaged skill + conversation script (WBS 4.1), demo script (WBS 6.5) | next |
+| Plugin package with skill + conversation script (`plugin/`, WBS 4.1), demo script (`docs/DEMO_SCRIPT.md`, WBS 6.5) | written, dry run in ChatGPT next |
 
 ## Requirements
 
@@ -107,6 +107,7 @@ docker run --rm -p 8000:8000 insurance-gpt
 ## Layout
 
 ```text
+plugin/              ChatGPT plugin package: manifest, MCP server URL, skill + conversation script
 tuning.yaml          all quality knobs: chunking, retrieval, texts for ChatGPT, evaluation targets
 src/insurance_gpt/   server.py, config.py (runtime), tuning.py (loads tuning.yaml), sources.py, ingest/ (PDF -> chunks),
                      retrieval/ (search), tools/ (MCP tools)

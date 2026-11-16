@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ergo-dental",
+  "version": "0.1.0",
+  "description": "Answers questions about ERGO dental supplementary insurance from the official documents, with verified quotes (demo).",
+  "author": { "name": "ERGO ChatGPT plugin PoC team" },
+  "repository": "https://github.com/mianowski/insurance-gpt-mcp-plugin",
+  "keywords": ["insurance", "dental", "rag", "citations"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "ERGO Dental (demo)",
+        "shortDescription": "Dental insurance answers with verified quotes",
+        "longDescription": "Answers customer questions about ERGO dental supplementary insurance (Dental-Schutz, Dental-Vorsorge, Zahnersatz Sofort, Kieferorthopädie Sofort) from ERGO's public documents. Every answer quotes the source, verified by the server and shown on a citation card with a link to the PDF page. Demo only; not an official ERGO service.",
+        "developerName": "ERGO ChatGPT plugin PoC team",
+        "category": "Productivity",
+        "capabilities": ["Read"],
+        "defaultPrompt": [
+          "Does Dental-Schutz 90 cover implants?",
+          "Was kostet Dental-Schutz 100 für einen 35-Jährigen?"
+        ]
+      }
+    }
+  }
+}

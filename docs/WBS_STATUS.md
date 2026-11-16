@@ -26,7 +26,7 @@ tariff rules, which is struck out in the plan.
 | ID | Task | Type | Deliverable | Status | Where we are |
 | --- | --- | --- | --- | --- | --- |
 | 1.1 | Define PoC scope, target users, market, language, and exclusions | C | Agreed scope and demo boundaries | ➖ ✅ | Agreed: public ERGO dental documents only, German and English, private demo hosting, moves to ERGO infrastructure if approved. |
-| 1.2 | Define conversation scenarios and acceptance criteria | C | Happy paths, edge cases, and expected outcomes | 🟡 | `tests/eval/questions.yaml`: 16 in-scope DE/EN questions with the expected passages, plus 4 out-of-scope ones. The demo questions with expected answers are in the setup guide. **Missing:** agreed acceptance criteria, multi-turn scenarios (follow-ups, clarifications), adversarial cases. |
+| 1.2 | Define conversation scenarios and acceptance criteria | C | Happy paths, edge cases, and expected outcomes | 🟡 | `tests/eval/questions.yaml`: 16 in-scope DE/EN questions with the expected passages, plus 4 out-of-scope ones. Conversation script with 12 scenarios and their expected tool calls and answers, including follow-ups, clarifying questions, out-of-scope, personal data and prompt injection: `plugin/skills/ergo-dental-coverage/references/conversation-script.md`. **Missing:** acceptance criteria agreed with the team; running the new scenarios in ChatGPT. |
 | 1.3 | Confirm workspace permissions and hosting/connectivity feasibility | C | Custom app can connect to a minimal MCP endpoint | ➖ ✅ | Done: the server is registered as a custom MCP plugin in ChatGPT (Work chat, via ngrok) and was tested in two rounds. |
 | 1.4 | Create basic architecture design | C | — | ✅ | `docs/ARCHITECTURE.md`: decisions D1–D9, components, request flow, environments, security, open questions. |
 
@@ -53,7 +53,7 @@ tariff rules, which is struck out in the plan.
 
 | ID | Task | Type | Deliverable | Status | Where we are |
 | --- | --- | --- | --- | --- | --- |
-| 4.1 | Configure tool descriptions (skills) and conversation guidance (script) | C | Appropriate tool use, follow-up questions, and fallback behavior | 🟡 | Tool descriptions and answer rules (0)–(5) are in `tuning.yaml`: answer in the question's language, use only the passages, quote verbatim, decline out-of-scope questions, add the disclaimer. The second ChatGPT test showed correct tool use and fallbacks. **Missing:** a packaged ChatGPT skill, guidance on asking follow-up questions, a conversation script. |
+| 4.1 | Configure tool descriptions (skills) and conversation guidance (script) | C | Appropriate tool use, follow-up questions, and fallback behavior | 🟡 | Rules (0)–(8) in `tuning.yaml`, used on chatgpt.com today: answer in the question's language, use only the passages, quote verbatim and show the card, decline out-of-scope questions, ask which tariff when the answer differs by tariff, ask for the age for premiums, search again for follow-ups, protect personal data, add the disclaimer. **Packaged skill:** `plugin/` (manifest, MCP server, skill `ergo-dental-coverage` with workflow and conversation script). **Missing:** running the new scenarios in ChatGPT; installing the full package (needs the ChatGPT desktop app or workspace publishing). |
 | 4.2 | Develop embedded tariff configurator | F | Selectable coverage groups, comparison, price, and disclosures | ⬜ | Not started; needs 3.4–3.6. |
 | 4.3 | Implement chat/UI state synchronization | F | Chat and configurator use the same current selection | ⬜ | Not started; needs 4.2. |
 | 4.4 | Implement adviser link or simulated handoff | F/C | Button works without creating a real lead | ⬜ | Not started. Today the answer only tells the user in text to contact ERGO customer service or an adviser. |
@@ -77,7 +77,7 @@ tariff rules, which is struck out in the plan.
 | 6.2 | Test complete journeys, UI/chat consistency, and session isolation | V | End-to-end scenarios pass | 🟡 | Two manual test rounds in ChatGPT: the second had correct answers, quotes and fallbacks, and the language rule was fixed after it. **Missing:** a repeatable test of full ChatGPT answers (does the answer use the right language, the right quote, stay in scope?), UI consistency, session isolation. |
 | 6.3 | Test unsupported claims, prompt injection, and sensitive-data handling | V | Defined safety and fallback cases pass | 🟡 | Out-of-scope and unsupported questions are tested. **Missing:** prompt-injection and sensitive-data test cases. |
 | 6.4 | Conduct product-owner review and user acceptance testing | V | Product content and demonstrated behavior accepted | ➖ | Struck out in the plan. |
-| 6.5 | Prepare demo script, deployment instructions, and known-limitations list | V | Repeatable demonstration and handover package | 🟡 | Deployment instructions and demo questions: `docs/CHATGPT_PLUGIN_SETUP.md`. Known limitations: `docs/ARCHITECTURE.md`. **Missing:** a scripted demo walkthrough and a handover package. |
+| 6.5 | Prepare demo script, deployment instructions, and known-limitations list | V | Repeatable demonstration and handover package | 🟡 | Demo script with checklist, 7 steps, presenter notes and fixes: `docs/DEMO_SCRIPT.md`. Deployment instructions: `docs/CHATGPT_PLUGIN_SETUP.md`. Known limitations: `docs/ARCHITECTURE.md`. **Missing:** a dry run of the demo script in ChatGPT; a handover package. |
 
 ## Suggested next steps
 
@@ -85,7 +85,7 @@ tariff rules, which is struck out in the plan.
    depend on it). If not, mark those rows out of scope too.
 2. **Confirm the source pack (2.1):** are the brochure premiums (as of 01.07.2022) acceptable for the demo?
 3. ~~Citation card + server-side quote check (5.2)~~ done, works in ChatGPT.
-4. **Packaged skill and conversation script (4.1)**, then **demo script (6.5)**.
+4. ~~Packaged skill and conversation script (4.1), demo script (6.5)~~ written; next: dry-run them in ChatGPT.
 5. **Stable hosting with access control and redacted logs (5.1, 5.3)** before sharing the URL beyond the team.
 6. **Grow the scenario set (1.2, 6.2, 6.3):** multi-turn, prompt injection, sensitive data; add an
    automated check of full ChatGPT answers.

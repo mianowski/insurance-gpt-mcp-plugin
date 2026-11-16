@@ -1,0 +1,8 @@
+# The MCP server this skill depends on. Replace the URL with your tunnel or server address (…/mcp).
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "ergo-dental"
+      description: "Search ERGO dental insurance documents and show verified citation cards"
+      transport: "streamable_http"
+      url: "https://your-name.ngrok-free.app/mcp"
