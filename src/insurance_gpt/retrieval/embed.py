@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 from fastembed import SparseEmbedding, SparseTextEmbedding, TextEmbedding
 
-SPARSE_MODEL = "Qdrant/bm25"
+from insurance_gpt.tuning import Retrieval
 
 
 @dataclass(frozen=True)
@@ -23,13 +23,14 @@ DENSE_MODELS = {
 
 
 class Embedder:
-    def __init__(self, dense_model: str, models_dir: Path):
-        if dense_model not in DENSE_MODELS:
-            raise ValueError(f"Unsupported embedding model {dense_model}; known: {sorted(DENSE_MODELS)}")
-        self.dense_model = dense_model
-        self.spec = DENSE_MODELS[dense_model]
-        self._dense = TextEmbedding(dense_model, cache_dir=str(models_dir))
-        self._sparse = SparseTextEmbedding(SPARSE_MODEL, cache_dir=str(models_dir), language="german")
+    def __init__(self, tuning: Retrieval, models_dir: Path):
+        if tuning.dense_model not in DENSE_MODELS:
+            raise ValueError(f"Unsupported embedding model {tuning.dense_model}; known: {sorted(DENSE_MODELS)}")
+        self.spec = DENSE_MODELS[tuning.dense_model]
+        self._dense = TextEmbedding(tuning.dense_model, cache_dir=str(models_dir))
+        self._sparse = SparseTextEmbedding(
+            tuning.sparse_model, cache_dir=str(models_dir), language=tuning.sparse_language
+        )
 
     def passages_dense(self, texts: list[str]) -> np.ndarray:
         return _normalize(np.array(list(self._dense.embed([self.spec.passage_prefix + t for t in texts]))))

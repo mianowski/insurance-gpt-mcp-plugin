@@ -16,17 +16,14 @@ from pydantic import BaseModel
 from insurance_gpt.ingest.layout import Line
 from insurance_gpt.ingest.tables import TableInfo
 from insurance_gpt.sources import DocumentPart, SourceDocument
+from insurance_gpt.tuning import Chunking
 
 SECTION_RE = re.compile(r"^(\d{1,2})\s+(\S.*)$")
 CLAUSE_RE = re.compile(r"^(\d{1,2})\.(\d{1,2})(?![\d,])\s*(.*)$")
 # Words after a line-break hyphen that mean the hyphen is real ("Ober- und Unterkiefer").
 KEEP_HYPHEN_BEFORE = {"und", "oder", "bzw.", "sowie", "bis"}
-MAX_CHUNK_CHARS = 1400
-TARGET_CHUNK_CHARS = 900
 SENTENCE_END_RE = re.compile(r"[.;:!?]\s+(?=[A-ZÄÖÜ•–(!X])")
 ABBREVIATIONS = {"bzw.", "z.", "B.", "ggf.", "u.", "a.", "d.", "h.", "Nr.", "Abs.", "ca.", "usw.", "vgl."}
-# Text before the first heading shorter than this is just the document title.
-MIN_PREAMBLE_CHARS = 120
 
 
 class Chunk(BaseModel):
@@ -190,9 +187,9 @@ def _with_text(line: Line, text: str) -> Line:
     return Line(line.page, line.x0, line.y0, line.x1, text, line.size, line.bold, line.column)
 
 
-def _split(text: str) -> list[tuple[int, int]]:
-    """(start, end) spans cutting an oversized text at sentence ends into pieces of ~TARGET_CHUNK_CHARS."""
-    if len(text) <= MAX_CHUNK_CHARS:
+def _split(text: str, max_chars: int, target_chars: int) -> list[tuple[int, int]]:
+    """(start, end) spans cutting a text longer than max_chars at sentence ends into pieces of ~target_chars."""
+    if len(text) <= max_chars:
         return [(0, len(text))]
     cuts = [
         m.end()
@@ -201,7 +198,7 @@ def _split(text: str) -> list[tuple[int, int]]:
     ]
     spans, start = [], 0
     for prev, cut in zip([0, *cuts], [*cuts, len(text)], strict=True):
-        if cut - start > TARGET_CHUNK_CHARS and prev > start:
+        if cut - start > target_chars and prev > start:
             spans.append((start, prev))
             start = prev
     spans.append((start, len(text)))
@@ -242,7 +239,11 @@ def _table_chunks(doc: SourceDocument, part: DocumentPart, tables: list[TableInf
 
 
 def chunk_part(
-    doc: SourceDocument, part: DocumentPart, lines: list[Line], tables: list[TableInfo] | None = None
+    doc: SourceDocument,
+    part: DocumentPart,
+    lines: list[Line],
+    chunking: Chunking,
+    tables: list[TableInfo] | None = None,
 ) -> list[Chunk]:
     units = _numbered_units(lines) if part.structure == "numbered" else _heading_units(lines, part)
     chunks: list[Chunk] = []
@@ -251,12 +252,12 @@ def chunk_part(
         if not unit.lines:
             continue
         text, offsets = join_lines(unit.lines)
-        if unit is units[0] and len(text) < MIN_PREAMBLE_CHARS:
-            continue
+        if unit is units[0] and len(text) < chunking.min_preamble_chars:
+            continue  # just the document title
         if unit.section is None:
             heading_no += 1
         key = unit.clause or unit.section or f"h{heading_no:02d}"
-        pieces = _split(text)
+        pieces = _split(text, chunking.max_chars, chunking.target_chars)
         for i, (start, end) in enumerate(pieces, start=1):
             chunks.append(
                 Chunk(

@@ -1,0 +1,103 @@
+# Every knob that affects answer quality, in one place. Change a value, then:
+#
+#   uv run python -m insurance_gpt.ingest build      # only after `chunking` changes (commit the new chunks)
+#   uv run python -m insurance_gpt.ingest index      # after `chunking` or embedding changes (re-embeds once)
+#   uv run python -m insurance_gpt.retrieval.evaluate                 # measure against `evaluation` targets
+#   uv run python -m insurance_gpt.retrieval.evaluate --tuning my-experiment.yaml   # try a variant file
+#
+# Restart the server afterwards. When `answer` texts change, refresh the plugin in ChatGPT (it caches tool
+# descriptions). Use another file for the server with IGPT_TUNING_FILE=path/to/file.yaml.
+# Every key is required: there are no hidden defaults in the code.
+
+# --- How PDFs are cut into passages (knowledge/chunks) -----------------------------------------------------
+chunking:
+  max_chars: 1400 # longer sections are split at sentence ends...
+  target_chars: 900 # ...into pieces of about this size
+  min_preamble_chars: 120 # shorter text before the first heading is the document title; dropped
+
+# --- How passages are found ---------------------------------------------------------------------------------
+retrieval:
+  # Dense = meaning, works across languages. Supported: intfloat/multilingual-e5-large,
+  # sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (prefixes per model are in retrieval/embed.py).
+  dense_model: intfloat/multilingual-e5-large
+  # Sparse = exact German terms (BM25 with stemming).
+  sparse_model: Qdrant/bm25
+  sparse_language: german
+  embed_headings: true # embed part/chapter/section titles with each passage (short rows keep their context)
+  mode: hybrid # hybrid (dense + BM25, fused with RRF) | dense | sparse
+  search_with_question: true # also search with the user's original question, not only the German query
+  prefetch_limit: 20 # candidates per search variant before fusion
+  top_k: 5 # passages returned when ChatGPT doesn't ask for a number
+  max_top_k: 10 # most passages ChatGPT may ask for
+  # Best cosine similarity below this -> "no_relevant_passage". Calibrate with evaluate: it prints the lowest
+  # in-scope and highest unrelated score (currently 0.829 / 0.803).
+  min_relevance: 0.81
+
+# --- What ChatGPT is told -----------------------------------------------------------------------------------
+# Placeholders: {disclaimer} and {rules} are filled in everywhere; {products} in scope_note at runtime.
+answer:
+  disclaimer: Informational only; the insurance contract and its full conditions are decisive.
+
+  # Conversation rules (WBS 4.1), numbered (0), (1), … and sent in the server instructions, the
+  # search_conditions description and every search result, because ChatGPT may also have web search and
+  # general knowledge available and tends to mix them in.
+  rules:
+    - >-
+      Answer in the language the user's question is written in (German question -> German answer),
+      regardless of interface or account language.
+    - Answer only from passages returned by search_conditions or get_section.
+    - >-
+      Do not add ERGO products, tariffs, prices, limits or rules from web search or general knowledge,
+      not even as a suggestion; if the passages don't answer something, say that the available documents
+      don't cover it.
+    - >-
+      Cite the passage whose text actually states the rule (its `citation`: part, Ziffer, page), and quote
+      the decisive sentence verbatim in German, followed by a translation if the question is not in German.
+    - >-
+      Questions about other insurance types, other insurers, or the user's own contract, claim or policy
+      number are out of scope: say so briefly, point to ERGO customer service or an adviser, and do not
+      answer them from general knowledge or the web.
+    - "End with: {disclaimer}"
+
+  server_instructions: >-
+    Answers customer questions about ERGO dental supplementary insurance (Zahn-Zusatzversicherung) from
+    the official documents in this knowledge base. Always call search_conditions before answering such a
+    question, and use these documents instead of web search. {rules}
+
+  tools:
+    list_documents: >-
+      List the documents this plugin answers from: ERGO dental supplementary insurance
+      (Zahn-Zusatzversicherung) only, with the tariffs each document covers.
+      Call it when the user asks what is covered, or when a question might be about another product.
+      Anything outside these documents is out of scope; do not answer it from general knowledge or the web.
+    search_conditions: >-
+      Search the ERGO dental supplementary insurance documents (all tariffs listed by list_documents) and
+      return the most relevant source passages with citations.
+      Call this BEFORE answering any question about these products: coverage, exclusions, limits, waiting
+      periods, cancellation, payments, procedures. Prefer it over web search. Passages are verbatim German
+      text; answer in the user's language.
+      {rules}
+    search_query: >-
+      Search query in GERMAN, the language of the documents. Translate the user's question and use the
+      insurance terms the conditions would use, e.g. 'Implantate Leistung Ausschluss'.
+    get_section: >-
+      Return the complete section a passage belongs to (all its clauses), e.g. to read the exclusions or
+      limits that follow a benefit clause.
+
+  scope_note: >-
+    Only these ERGO dental insurance documents are covered (tariffs: {products}). Questions about other
+    insurance types (car, household, life, …), other insurers, or a customer's own contract or claim are out
+    of scope: say so and do not answer them from general knowledge or web search.
+  result_guidance: >-
+    Use get_section when a passage is cut short or exclusions/limits may follow in the same section. {rules}
+  no_result_guidance: >-
+    The documents contain nothing relevant to this question. Tell the user the available ERGO dental
+    insurance documents don't cover it and suggest ERGO customer service or an adviser. Do not answer from
+    general knowledge or web search. {disclaimer}
+
+# --- What "good enough" means (tests/eval/questions.yaml; the test suite fails below these) ------------------
+evaluation:
+  k: 5 # hit@k counts the expected passage anywhere in the top k
+  min_hit_at_k: 0.9
+  min_mrr: 0.85
+  min_rejection_rate: 1.0 # share of unrelated questions that must come back as "no_relevant_passage"

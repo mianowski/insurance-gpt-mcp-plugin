@@ -1,8 +1,8 @@
 """Embedding cache + Qdrant collection.
 
 Embeddings are cached in .data/index/<fingerprint>.npz, where the fingerprint covers the chunk texts and the
-model. Any change to the knowledge base or the model produces a new fingerprint, so a stale index can't be
-served. The Qdrant collection (in-memory by default) is loaded from that cache.
+embedding settings. Any change to the knowledge base or those settings produces a new fingerprint, so a stale
+index can't be served. The Qdrant collection (in-memory by default) is loaded from that cache.
 """
 
 import hashlib
@@ -14,7 +14,8 @@ import numpy as np
 from qdrant_client import QdrantClient, models
 
 from insurance_gpt.ingest.chunk import Chunk
-from insurance_gpt.retrieval.embed import SPARSE_MODEL, Embedder
+from insurance_gpt.retrieval.embed import Embedder
+from insurance_gpt.tuning import Retrieval
 
 log = logging.getLogger(__name__)
 
@@ -22,26 +23,28 @@ DENSE = "dense"
 SPARSE = "bm25"
 
 
-def embedding_text(chunk: Chunk) -> str:
-    """What gets embedded: the chunk text with its headings, so short clauses keep their context."""
+def embedding_text(chunk: Chunk, with_headings: bool) -> str:
+    """What gets embedded: the chunk text, optionally with its headings so short clauses keep their context."""
+    if not with_headings:
+        return chunk.text
     heading = " – ".join(filter(None, [chunk.part_title, chunk.chapter, chunk.section_title, chunk.clause]))
     return f"{heading}\n{chunk.text}"
 
 
-def fingerprint(chunks: list[Chunk], dense_model: str) -> str:
-    h = hashlib.sha256(f"{dense_model}|{SPARSE_MODEL}|v1".encode())
+def fingerprint(chunks: list[Chunk], tuning: Retrieval) -> str:
+    h = hashlib.sha256(f"{tuning.dense_model}|{tuning.sparse_model}|{tuning.sparse_language}|v1".encode())
     for chunk in chunks:
-        h.update(f"{chunk.chunk_id}\0{embedding_text(chunk)}\0".encode())
+        h.update(f"{chunk.chunk_id}\0{embedding_text(chunk, tuning.embed_headings)}\0".encode())
     return h.hexdigest()[:16]
 
 
-def load_or_embed(chunks: list[Chunk], embedder: Embedder, index_dir: Path) -> dict[str, np.ndarray]:
-    path = index_dir / f"{fingerprint(chunks, embedder.dense_model)}.npz"
+def load_or_embed(chunks: list[Chunk], embedder: Embedder, tuning: Retrieval, index_dir: Path) -> dict[str, np.ndarray]:
+    path = index_dir / f"{fingerprint(chunks, tuning)}.npz"
     if path.exists():
         cached = np.load(path)
         return {key: cached[key] for key in cached.files}
-    log.info("Embedding %d chunks with %s (cache %s)", len(chunks), embedder.dense_model, path.name)
-    texts = [embedding_text(c) for c in chunks]
+    log.info("Embedding %d chunks with %s (cache %s)", len(chunks), tuning.dense_model, path.name)
+    texts = [embedding_text(c, tuning.embed_headings) for c in chunks]
     sparse = embedder.passages_sparse(texts)
     arrays = {
         "dense": embedder.passages_dense(texts),

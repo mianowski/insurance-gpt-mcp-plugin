@@ -139,7 +139,8 @@ with: *"Informational only; the insurance contract and its full conditions are d
 
 - **Code or documents changed** (`git pull`): stop the server (`Ctrl+C`), run
   `uv sync` and `uv run python -m insurance_gpt.ingest index`, start it again. The tunnel can keep running.
-- **Tool descriptions or instructions changed**: ChatGPT may keep the old ones. Refresh the plugin in your
+- **Tool descriptions or instructions changed** (the `answer` section of `tuning.yaml`): ChatGPT may keep
+  the old ones. Refresh the plugin in your
   personal plugins, or remove it and add it again with the same URL.
 - **Tunnel URL changed** (no static domain): restart the server with the new `IGPT_PUBLIC_HOSTS` and add
   the plugin again with the new URL.

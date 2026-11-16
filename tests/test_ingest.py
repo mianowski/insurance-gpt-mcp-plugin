@@ -9,6 +9,7 @@ from insurance_gpt.ingest.fetch import HashMismatchError, ensure_pdf
 from insurance_gpt.ingest.layout import Line
 from insurance_gpt.ingest.tables import find_tables
 from insurance_gpt.sources import load_manifest
+from insurance_gpt.tuning import get_tuning
 
 OVERVIEW = "ergo-zahntarife-uebersicht-2024-08"
 BROCHURE = "ergo-zahn-broschuere-2022-07"
@@ -40,7 +41,7 @@ def test_join_lines_keeps_list_items_on_own_lines_and_tracks_pages():
 def test_split_never_cuts_after_abbreviations():
     sentence = "Das gilt z. B. für Kronen bzw. Brücken (z. B. Keramik). "
     text = sentence * 40
-    spans = _split(text)
+    spans = _split(text, max_chars=1400, target_chars=900)
     assert len(spans) > 1
     assert spans[0][0] == 0 and spans[-1][1] == len(text)
     for start, end in spans:
@@ -130,7 +131,8 @@ def test_tariff_cards_side_by_side_are_not_a_table():
 @pytest.fixture(scope="module")
 def chunks():
     knowledge = get_settings().knowledge_dir
-    return {c.chunk_id: c for doc in _docs().values() for c in build_document(doc, knowledge)}
+    chunking = get_tuning().chunking
+    return {c.chunk_id: c for doc in _docs().values() for c in build_document(doc, knowledge, chunking)}
 
 
 def _row(chunks, doc_id: str, section_title: str, contains: str):

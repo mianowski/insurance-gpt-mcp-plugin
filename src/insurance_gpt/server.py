@@ -9,18 +9,17 @@ from mcp.types import ToolAnnotations
 from insurance_gpt.config import Settings, get_settings
 from insurance_gpt.tools import knowledge
 
-INSTRUCTIONS = (
-    "Answers customer questions about ERGO dental supplementary insurance (Zahn-Zusatzversicherung) from "
-    "the official documents in this knowledge base. Always call search_conditions before answering such a "
-    "question, and use these documents instead of web search. " + knowledge.ANSWER_RULES
-)
+TEXTS = knowledge.TEXTS
+INSTRUCTIONS = TEXTS.render(TEXTS.server_instructions)
 
 settings = get_settings()
 mcp = MCPServer("ERGO Insurance Terms", instructions=INSTRUCTIONS)
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+# Tool descriptions live in tuning.yaml (answer.tools), next to the rules they repeat.
 for tool in (knowledge.list_documents, knowledge.search_conditions, knowledge.get_section):
-    mcp.tool(annotations=READ_ONLY)(tool)
+    description = TEXTS.render(getattr(TEXTS.tools, tool.__name__))
+    mcp.tool(annotations=READ_ONLY, description=description)(tool)
 
 
 def transport_security(settings: Settings) -> TransportSecuritySettings:

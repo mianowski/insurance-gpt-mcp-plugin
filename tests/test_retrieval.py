@@ -6,6 +6,7 @@ import asyncio
 import pytest
 
 from insurance_gpt.config import get_settings
+from insurance_gpt.tuning import get_tuning
 
 MODEL_DIR = get_settings().models_dir / "models--Qdrant--multilingual-e5-large-onnx"
 pytestmark = pytest.mark.skipif(
@@ -29,11 +30,10 @@ def _call(tool: str, args: dict):
 def test_eval_set_meets_targets(retriever):
     from insurance_gpt.retrieval.evaluate import evaluate
 
-    report = evaluate(retriever)
+    report = evaluate(retriever, get_tuning().evaluation.k)
     misses = [o.id for o in report.in_scope if not (o.rank and o.relevant)]
-    assert report.hit_at(report.k) >= 0.9, f"missed: {misses}"
-    assert report.mrr >= 0.85
-    assert report.rejection_rate == 1.0, [o.id for o in report.search_rejects if o.relevant]
+    accepted = [o.id for o in report.search_rejects if o.relevant]
+    assert not report.failures(get_tuning().evaluation), f"missed: {misses}, unrelated accepted: {accepted}"
 
 
 def test_search_returns_citable_passages(retriever):

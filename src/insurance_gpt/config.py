@@ -21,14 +21,12 @@ class Settings(BaseSettings):
     knowledge_dir: Path = PROJECT_ROOT / "knowledge"
     data_dir: Path = PROJECT_ROOT / ".data"
 
-    embedding_model: str = "intfloat/multilingual-e5-large"
+    # Quality knobs (chunking, retrieval, prompts, evaluation targets): see tuning.yaml / tuning.py.
+    tuning_file: Path = PROJECT_ROOT / "tuning.yaml"
+
     # None = in-memory Qdrant rebuilt at startup from cached embeddings; set a URL to use a Qdrant server.
     qdrant_url: str | None = None
     collection: str = "conditions"
-
-    search_top_k: int = 5
-    # Below this cosine similarity (best dense match) a search returns "no_relevant_passage".
-    min_relevance: float = 0.81
 
     @property
     def public_host_list(self) -> list[str]:

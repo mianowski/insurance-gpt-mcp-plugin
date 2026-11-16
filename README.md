@@ -26,7 +26,7 @@ PoC / demo only: it uses **public** documents. Architecture and decisions are in
 
 ```bash
 uv sync                      # create .venv with all deps + dev tools
-cp .env.example .env         # optional, settings use the IGPT_ prefix
+cp .env.example .env         # optional, runtime settings (host, port, public host) use the IGPT_ prefix
 uv run insurance-gpt         # MCP server at http://127.0.0.1:8000/mcp
 uv run pytest                # tests
 uv run ruff check . && uv run ruff format .
@@ -47,6 +47,21 @@ uv run python -m insurance_gpt.retrieval.evaluate               # search quality
 
 The model and the embedding cache live in `.data/` (not committed). The server builds the cache on first
 start if `index` wasn't run; retrieval tests are skipped until the model is downloaded.
+
+### Tuning answer quality
+
+Every knob that changes how good the answers are lives in **[`tuning.yaml`](tuning.yaml)**: chunk sizes,
+embedding model, search mode (hybrid / dense / BM25), prefetch, `top_k`, the relevance threshold, all texts
+ChatGPT reads (rules, tool descriptions, guidance, disclaimer) and the evaluation targets. Workflow:
+
+1. Change a value (or copy the file to try a variant).
+2. `uv run python -m insurance_gpt.retrieval.evaluate [--tuning variant.yaml]`: prints the active settings,
+   hit@1/hit@5/MRR, rejection of unrelated questions and whether the targets are met (exit code 1 if not).
+3. After `chunking` changes run `ingest build` first and commit the new chunks; after embedding changes
+   `ingest index` (or let the server re-embed on start). Restart the server; refresh the plugin in ChatGPT
+   when `answer` texts changed.
+
+The server uses another file with `IGPT_TUNING_FILE=path.yaml`. Unknown or missing keys fail at startup.
 
 To add a document: put an entry in `knowledge/sources.yaml` (URL, sha256, `parts` with page ranges and
 structure), run `build`, review with `show`, commit the PDF and the chunk file together.
@@ -90,7 +105,9 @@ docker run --rm -p 8000:8000 insurance-gpt
 ## Layout
 
 ```text
-src/insurance_gpt/   server.py, config.py, sources.py, ingest/ (PDF -> chunks), retrieval/ (search), tools/ (MCP tools)
+tuning.yaml          all quality knobs: chunking, retrieval, texts for ChatGPT, evaluation targets
+src/insurance_gpt/   server.py, config.py (runtime), tuning.py (loads tuning.yaml), sources.py, ingest/ (PDF -> chunks),
+                     retrieval/ (search), tools/ (MCP tools)
 knowledge/           sources.yaml (document list), raw/ (source PDFs, <doc_id>.pdf), chunks/ (*.jsonl)
 tests/               pytest; eval/questions.yaml (retrieval eval set)
 docs/                architecture

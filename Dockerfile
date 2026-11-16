@@ -9,6 +9,7 @@ RUN uv sync --frozen --no-install-project
 
 COPY src ./src
 COPY knowledge ./knowledge
+COPY tuning.yaml ./
 RUN uv sync --frozen
 
 # Bake the embedding model (~2.2 GB) and the chunk embeddings into the image: no download at startup,

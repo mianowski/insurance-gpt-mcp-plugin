@@ -18,13 +18,14 @@ from insurance_gpt.ingest.layout import extract_lines, extract_regions
 from insurance_gpt.ingest.tables import extract_part
 from insurance_gpt.retrieval.store import read_chunks
 from insurance_gpt.sources import SourceDocument, load_manifest
+from insurance_gpt.tuning import Chunking, get_tuning
 
 
 def chunks_path(knowledge_dir: Path, doc_id: str) -> Path:
     return knowledge_dir / "chunks" / f"{doc_id}.jsonl"
 
 
-def build_document(doc: SourceDocument, knowledge_dir: Path) -> list[Chunk]:
+def build_document(doc: SourceDocument, knowledge_dir: Path, chunking: Chunking) -> list[Chunk]:
     pdf = ensure_pdf(doc, knowledge_dir / "raw")
     chunks: list[Chunk] = []
     for part in doc.parts:
@@ -32,9 +33,9 @@ def build_document(doc: SourceDocument, knowledge_dir: Path) -> list[Chunk]:
         if part.structure == "mixed":
             regions = extract_regions(*pages)
             lines, tables = extract_part(regions, re.compile(part.table_headers or "$^"))
-            chunks.extend(chunk_part(doc, part, lines, tables))
+            chunks.extend(chunk_part(doc, part, lines, chunking, tables))
         else:
-            chunks.extend(chunk_part(doc, part, extract_lines(*pages)))
+            chunks.extend(chunk_part(doc, part, extract_lines(*pages), chunking))
     ids = [c.chunk_id for c in chunks]
     duplicates = {i for i in ids if ids.count(i) > 1}
     if duplicates:
@@ -56,7 +57,7 @@ def cmd_build(args: argparse.Namespace) -> None:
     if not docs:
         sys.exit(f"Unknown doc_id: {args.doc}")
     for doc in docs:
-        chunks = build_document(doc, settings.knowledge_dir)
+        chunks = build_document(doc, settings.knowledge_dir, get_tuning().chunking)
         path = chunks_path(settings.knowledge_dir, doc.doc_id)
         write_chunks(chunks, path)
         sizes = sorted(len(c.text) for c in chunks)
@@ -80,11 +81,11 @@ def cmd_index(args: argparse.Namespace) -> None:
     from insurance_gpt.retrieval.index import fingerprint, load_or_embed
     from insurance_gpt.retrieval.store import KnowledgeStore
 
-    settings = get_settings()
+    settings, retrieval = get_settings(), get_tuning().retrieval
     store = KnowledgeStore(settings.sources_file, settings.chunks_dir)
-    load_or_embed(store.chunks, Embedder(settings.embedding_model, settings.models_dir), settings.index_dir)
-    name = fingerprint(store.chunks, settings.embedding_model)
-    print(f"{len(store.chunks)} chunks embedded with {settings.embedding_model} -> {settings.index_dir / name}.npz")
+    load_or_embed(store.chunks, Embedder(retrieval, settings.models_dir), retrieval, settings.index_dir)
+    name = fingerprint(store.chunks, retrieval)
+    print(f"{len(store.chunks)} chunks embedded with {retrieval.dense_model} -> {settings.index_dir / name}.npz")
 
 
 def main() -> None:

@@ -115,7 +115,7 @@ search can return both copies. The `numbered` mode (terms with clauses) is kept 
 - **Index**: in-memory Qdrant built at startup from `.data/index/<fingerprint>.npz`. The fingerprint covers
   chunk texts + models, so a changed knowledge base can't be served with stale vectors. `python -m
   insurance_gpt.ingest index` precomputes it (the Docker build does this and bakes the model in).
-- **Relevance threshold** (`IGPT_MIN_RELEVANCE`, 0.81): best cosine similarity of the hits; below it the
+- **Relevance threshold** (`retrieval.min_relevance` in `tuning.yaml`, 0.81): best cosine similarity of the hits; below it the
   tool returns `status: "no_relevant_passage"`, so the model says the documents don't cover the question.
 - **Query language matters**: the tool *requires* a German `query`. Eval with German queries:
   hit@5 1.00, hit@1 0.88, MRR 0.93; with raw English questions only: hit@5 0.56 (BM25 can't match English
@@ -126,8 +126,9 @@ search can return both copies. The `numbered` mode (terms with clauses) is kept 
   `reject_by: model`).
 - Reranker (e.g. `bge-reranker-v2-m3`) not needed at current eval results; revisit when the corpus grows.
 - Eval: `tests/eval/questions.yaml` (20 DE/EN questions with expected chunks),
-  `python -m insurance_gpt.retrieval.evaluate [--untranslated]`; `pytest` enforces hit@5 ≥ 0.9, MRR ≥ 0.85
-  and rejection of unrelated questions. The threshold margin is thin (unrelated max 0.803, in-scope min
+  `python -m insurance_gpt.retrieval.evaluate [--untranslated] [--tuning FILE]`; `pytest` enforces the
+  targets in `tuning.yaml` (`evaluation`: hit@5 ≥ 0.9, MRR ≥ 0.85, all unrelated questions rejected).
+  Dense-only (no BM25) scores MRR 0.88 vs 0.93 hybrid. The threshold margin is thin (unrelated max 0.803, in-scope min
   0.829): grow the eval set with the WBS 1.2 scenarios before relying on it.
 
 ### 4.3 MCP server and tools — WBS 3.2, 4.1, 4.5, 4.6
@@ -203,7 +204,8 @@ Kept as separate packages behind the same MCP server so they don't entangle the 
 ```text
 src/insurance_gpt/
   server.py            # MCPServer app, tool + widget registration, /mcp endpoint
-  config.py            # pydantic-settings, env vars
+  config.py            # runtime settings (host, port, paths), env vars
+  tuning.py            # loads tuning.yaml (repo root): every quality knob and every text ChatGPT reads
   tools/knowledge.py   # list_documents, search_conditions, get_section, show_citation
   retrieval/           # embedder interface, qdrant store, hybrid search, citation verifier
   ingest/              # fetch, parse, chunk, build (CLI)
@@ -268,6 +270,9 @@ Dockerfile, pyproject.toml (uv), .env.example
   waiting periods, caps in first years), out-of-scope (car insurance, own claim status), adversarial.
 - Automated: retrieval recall@5 for expected §, citation-verifier unit tests, chunker tests on real PDFs.
 - Manual: run the scripted demo in ChatGPT and check answer + citation for each scenario.
+- **One control file**: all parameters that affect quality (chunking, retrieval, prompts/rules, targets) are
+  in `tuning.yaml`; runtime/infrastructure stays in env vars. An experiment = a variant file evaluated with
+  `--tuning`; the evaluate output starts with the settings used, so results can be compared.
 
 ## 11. Decisions log and open questions
 
