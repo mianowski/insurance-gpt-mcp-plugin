@@ -82,12 +82,23 @@ Full step-by-step guide (host and tester, checks, troubleshooting):
 ChatGPT needs a public HTTPS URL. For development, tunnel the local server with ngrok (free account,
 one free static domain, so the URL stays the same between sessions):
 
-1. Install ngrok (`winget install ngrok.ngrok`), sign up at ngrok.com, then
+1. Install ngrok using your OS package manager (`winget install ngrok.ngrok` on Windows, or
+   `brew install ngrok` on macOS/Linux with Homebrew), sign up at ngrok.com, then
    `ngrok config add-authtoken <token>`. Claim your free static domain in the ngrok dashboard (Domains).
-2. Start the server and allow that domain as Host (other hosts are rejected):
+2. Start the server and allow that domain as Host (other hosts are rejected). Choose the command for your shell:
    ```powershell
+   # Windows PowerShell
    $env:IGPT_PUBLIC_HOSTS = "<your-domain>.ngrok-free.app"
-   python -m uv run insurance-gpt
+   uv run insurance-gpt
+   ```
+   ```cmd
+   :: Windows Command Prompt
+   set IGPT_PUBLIC_HOSTS=<your-domain>.ngrok-free.app
+   uv run insurance-gpt
+   ```
+   ```bash
+   # macOS / Linux (bash or zsh)
+   IGPT_PUBLIC_HOSTS="<your-domain>.ngrok-free.app" uv run insurance-gpt
    ```
 3. In a second terminal: `ngrok http 8000 --url <your-domain>.ngrok-free.app`
 4. In ChatGPT: chatgpt.com/plugins → **+** → *Add custom MCP server* → name `ERGO Dental (demo)`,

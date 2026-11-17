@@ -14,18 +14,22 @@ The server answers from public ERGO dental insurance documents only (see `knowle
 
 Requirements: Windows, macOS or Linux; Python is installed by `uv`; ~3 GB free disk (embedding model).
 
-1. **Get the code**
+1. **Get the code** (same commands on Windows, macOS and Linux)
 
    ```powershell
    git clone https://github.com/mianowski/insurance-gpt-mcp-plugin.git
    cd insurance-gpt-mcp-plugin
    ```
 
-2. **Install uv** (Python package manager), then open a new terminal:
+2. **Install uv** (Python package manager), then open a new terminal. Choose the installer for your OS:
 
    ```powershell
-   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"   # Windows
-   curl -LsSf https://astral.sh/uv/install.sh | sh                                      # macOS / Linux
+   # Windows (PowerShell)
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+   ```bash
+   # macOS / Linux (bash or zsh)
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
 3. **Install dependencies and build the search index** (downloads the e5-large model, ~2.2 GB, once):
@@ -36,12 +40,24 @@ Requirements: Windows, macOS or Linux; Python is installed by `uv`; ~3 GB free d
    ```
 
    It ends with `152 chunks embedded with intfloat/multilingual-e5-large -> …`.
-4. **Install ngrok** and connect it to your account (free at [ngrok.com](https://ngrok.com)):
+4. **Install ngrok** for your OS and connect it to your account (free at [ngrok.com](https://ngrok.com)):
 
    ```powershell
-   winget install --id Ngrok.Ngrok -e --source winget   # Windows (then: ngrok update)
-   brew install ngrok                                   # macOS
-   ngrok config add-authtoken <your-authtoken>          # from the ngrok dashboard
+   # Windows (PowerShell; then run: ngrok update)
+   winget install --id Ngrok.Ngrok -e --source winget
+   ```
+   ```bash
+   # macOS (Homebrew)
+   brew install ngrok
+   ```
+   ```bash
+   # Linux (if Homebrew is installed)
+   brew install ngrok
+   ```
+   Linux users without Homebrew can follow [ngrok's Linux install instructions](https://ngrok.com/downloads/linux).
+   ```text
+   # Windows, macOS or Linux (after installation)
+   ngrok config add-authtoken <your-authtoken>   # from the ngrok dashboard
    ```
 
 5. **Recommended: claim your free static domain** in the ngrok dashboard → *Domains*
@@ -50,16 +66,22 @@ Requirements: Windows, macOS or Linux; Python is installed by `uv`; ~3 GB free d
 
 ## 2. Start the server (host, each session)
 
-Terminal 1 — tell the server which public hostname to accept, then start it:
+Terminal 1 — tell the server which public hostname to accept, then start it. Use the command for your shell:
 
 ```powershell
-# PowerShell
+# Windows PowerShell
 $env:IGPT_PUBLIC_HOSTS = "your-name.ngrok-free.app"
 uv run insurance-gpt
 ```
 
+```cmd
+:: Windows Command Prompt
+set IGPT_PUBLIC_HOSTS=your-name.ngrok-free.app
+uv run insurance-gpt
+```
+
 ```bash
-# bash
+# macOS / Linux (bash or zsh)
 IGPT_PUBLIC_HOSTS=your-name.ngrok-free.app uv run insurance-gpt
 ```
 
@@ -154,9 +176,9 @@ with: *"Informational only; the insurance contract and its full conditions are d
 | ChatGPT can't connect, browser shows `Invalid Host header` | `IGPT_PUBLIC_HOSTS` doesn't match the tunnel hostname. Restart the server with the right hostname. |
 | Browser shows `404` | URL is missing `/mcp`. |
 | ngrok shows `ERR_NGROK_8012` / bad gateway | The server isn't running on port 8000 (terminal 1). |
-| `python -m insurance_gpt…` fails with *No module named insurance_gpt* | Use `uv run …`, or activate the environment first (`.venv\Scripts\Activate.ps1`). |
+| `python -m insurance_gpt…` fails with *No module named insurance_gpt* | Use `uv run …`, or activate the environment first: Windows PowerShell `.venv\Scripts\Activate.ps1`; macOS/Linux `source .venv/bin/activate`. |
 | Server start takes long the first time | It's downloading the embedding model (~2.2 GB) because step 1.3 wasn't run. |
-| `address already in use` on port 8000 | Another server is still running. Stop it, or start this one with `$env:IGPT_PORT = "8001"` and `ngrok http 8001`. |
+| `address already in use` on port 8000 | Another server is still running. Stop it, or start the server on port 8001 and run `ngrok http 8001`. Windows PowerShell: `$env:IGPT_PORT = "8001"; uv run insurance-gpt`; Windows Command Prompt: `set IGPT_PORT=8001 && uv run insurance-gpt`; macOS/Linux: `IGPT_PORT=8001 uv run insurance-gpt`. |
 | Answers mention other ERGO products or prices not in the documents | Web search is on in the chat: turn it off and start a new chat. |
 | Answer in the wrong language | Start a new chat; the rule is "answer in the language of the question". |
 
